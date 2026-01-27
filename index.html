@@ -28,7 +28,6 @@
         .table-row-hover:hover { background-color: #f8fafc; }
         .reconcile-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.875rem; }
         .subtotal-row { background-color: #f1f5f9; font-weight: 600; color: #475569; }
-        .locked-banner { background: linear-gradient(90deg, #1f2937, #4b5563); color: #f9fafb; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -37,13 +36,6 @@
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">合约交易分析终端 v6.7</h1>
             <p class="text-gray-500 mt-2 font-medium">性能极致优化版：DOM 缓冲渲染 | 极速导入 | 500条显示限制</p>
         </header>
-        <section class="locked-banner mb-6 rounded-xl px-5 py-4 text-sm shadow-sm">
-            <div class="flex flex-col gap-1">
-                <span class="font-semibold">🔒 只读锁定模式</span>
-                <span>已锁定所有录入、编辑、导入、导出及设置功能，仅用于展示或审阅数据。</span>
-            </div>
-        </section>
-
         <!-- Main Grid Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
@@ -664,21 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAll();
     document.getElementById('trade-form').addEventListener('submit', handleTradeSubmit);
     document.getElementById('edit-form').addEventListener('submit', handleEditSubmit);
-    lockApp();
 });
-
-function lockApp() {
-    document.querySelectorAll('input, select, textarea, button').forEach(el => {
-        el.disabled = true;
-        el.classList.add('opacity-60', 'cursor-not-allowed');
-        if (el.tagName.toLowerCase() === 'button') {
-            el.setAttribute('title', '已锁定，无法操作');
-        }
-    });
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', (event) => event.preventDefault());
-    });
-}
 </script>
 </body>
 </html>
