@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>合约交易分析终端 v6.7 (性能极致优化版)</title>
+    <title>合约交易分析终端 v7.1 (复盘看板版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -28,19 +28,51 @@
         .table-row-hover:hover { background-color: #f8fafc; }
         .reconcile-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.875rem; }
         .subtotal-row { background-color: #f1f5f9; font-weight: 600; color: #475569; }
+        
+        /* Filter Banner */
+        .filter-mode .filter-banner { display: flex; }
+        .filter-banner { display: none; }
+
+        /* Dashboard Cards */
+        .dash-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; text-align: center; }
+        .dash-val { font-size: 1.5rem; font-weight: 700; font-family: monospace; margin-top: 0.5rem; }
+        .dash-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
-    <div class="container mx-auto p-4 md:p-6 max-w-7xl">
+    <!-- Filter Banner -->
+    <div id="filter-banner" class="filter-banner fixed top-0 left-0 w-full bg-blue-500 text-white px-4 py-2 justify-between items-center z-50 shadow-md">
+        <div class="flex items-center gap-2 font-bold text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" /></svg>
+            <span>📅 统计周期：<span id="filter-date-display"></span> 至今</span>
+        </div>
+        <button onclick="clearDateFilter()" class="bg-white text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-50 shadow-sm">清除筛选 (显示全部)</button>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-6 max-w-7xl mt-8">
         <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">合约交易分析终端 v6.7</h1>
-            <p class="text-gray-500 mt-2 font-medium">性能极致优化版：DOM 缓冲渲染 | 极速导入 | 500条显示限制</p>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">合约交易分析终端 v7.1</h1>
+            <p class="text-gray-500 mt-2 font-medium">复盘看板版：当日平仓统计 | 综合仪表盘 | 导出报告</p>
         </header>
+
         <!-- Main Grid Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             <!-- Left Column: Controls (4 cols) -->
             <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Period Filter Module -->
+                <div class="bg-blue-50 p-6 rounded-xl shadow-sm border border-blue-100">
+                    <h2 class="text-lg font-bold mb-2 text-blue-900 flex items-center gap-2">
+                        📅 统计周期筛选
+                    </h2>
+                    <p class="text-xs text-blue-700 mb-3">设定起始日期，仅统计该日期之后的流水与盈亏。</p>
+                    <div class="flex gap-2">
+                        <input type="date" id="filter-date-input" class="flex-grow p-2 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
+                        <button onclick="applyDateFilter()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">筛选</button>
+                    </div>
+                </div>
+
                 <!-- Trade Entry Form -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h2 class="text-lg font-bold mb-4 border-b pb-3 flex items-center text-gray-700"><span>📝 记录交易</span></h2>
@@ -60,7 +92,7 @@
                             <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">数量 (负=卖)</label><input type="number" id="quantity" step="0.001" placeholder="-10" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm" required></div>
                             <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">价格</label><input type="number" step="any" id="price" placeholder="60.00" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm" required></div>
                         </div>
-                        <button type="submit" class="w-full bg-slate-800 text-white py-2 px-4 rounded-md hover:bg-slate-900 transition duration-200 font-medium">提交交易</button>
+                        <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white py-2 px-4 rounded-md hover:bg-slate-900 transition duration-200 font-medium">提交交易</button>
                     </form>
                 </div>
                 
@@ -71,7 +103,7 @@
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">Brent 费用</label><input type="number" step="0.01" id="commission-brent" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">Gas(HH/JKM)</label><input type="number" step="0.0001" id="commission-hh" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-purple-700 font-medium">TTF 换算</label><input type="number" step="0.01" id="ttf-multiplier" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-purple-50 border border-purple-200 rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">USD/CNY</label><input type="number" step="0.01" id="exchange-rate-rmb" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">USD/CNY 汇率</label><input type="number" step="0.01" id="exchange-rate-rmb" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">期初盈亏</label><input type="number" step="any" id="initial-realized-pl" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
                         <div class="border-t pt-2 mt-2"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-yellow-700 font-medium">对账基准金</label><input type="number" step="any" id="rec-base-val" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-yellow-50 border border-yellow-200 rounded text-sm"></div>
@@ -96,7 +128,10 @@
                     <div class="mt-4 space-y-2">
                         <button onclick="exportLedgerCSV()" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm font-medium">导出逐日台账 (CSV)</button>
                         <button onclick="openReconcileModal()" class="w-full bg-amber-500 text-white py-2 px-4 rounded hover:bg-amber-600 text-sm font-medium flex items-center justify-center gap-2">⚖️ 资金对账助手</button>
-                        <button onclick="generateDailyReport()" class="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm font-medium">📝 今日日报摘要</button>
+                        <button onclick="openDashboardModal()" class="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm font-medium shadow-md flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                            生成综合看板
+                        </button>
                     </div>
                 </div>
             </div>
@@ -130,6 +165,7 @@
                             <button onclick="exportPositionsCSV()" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-medium transition">导出 CSV</button>
                         </div>
                     </div>
+                    
                     <div class="overflow-x-auto rounded-lg border border-gray-200">
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
@@ -175,7 +211,7 @@
     <!-- Modals -->
     <div id="edit-modal" class="modal-backdrop hidden"><div class="modal-content"><h2 class="text-xl font-bold mb-4">编辑持仓</h2><form id="edit-form" class="space-y-4"><input type="hidden" id="edit-index"><label class="block text-sm">数量<input type="number" id="edit-quantity" class="w-full border p-2 rounded" required></label><label class="block text-sm">均价<input type="number" step="any" id="edit-price" class="w-full border p-2 rounded" required></label><div class="flex justify-end gap-2"><button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-200 rounded">取消</button><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">保存</button></div></form></div></div>
     <div id="action-confirm-modal" class="modal-backdrop hidden"><div class="modal-content text-center"><h2 id="confirm-title" class="text-xl font-bold mb-4"></h2><p id="confirm-body" class="mb-6 text-gray-600"></p><div class="flex justify-center gap-4"><button id="confirm-cancel-btn" type="button" onclick="closeActionConfirmModal()" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-400">取消</button><button id="confirm-action-btn" type="button" class="bg-red-600 text-white py-2 px-6 rounded-md hover:bg-red-700">确认</button></div></div></div>
-    <div id="report-modal" class="modal-backdrop hidden"><div class="modal-content"><h2 class="text-xl font-bold mb-4">今日日报</h2><div id="daily-report-content" class="report-text mb-4 text-sm bg-gray-50 p-4 rounded"></div><div class="flex justify-end gap-2"><button type="button" onclick="closeReportModal()" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-400">关闭</button><button type="button" onclick="copyReportToClipboard()" class="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700">复制</button></div></div></div>
+    
     <div id="reconcile-modal" class="modal-backdrop hidden">
         <div class="modal-content max-w-2xl w-full">
             <h2 class="text-xl font-semibold mb-4 flex items-center gap-2"><span class="text-yellow-600">⚖️</span> 资金对账助手</h2>
@@ -186,8 +222,10 @@
                 <hr class="border-gray-200">
                 <div class="reconcile-row"><label class="font-medium w-1/3">➖ 对账基准金:</label><input type="number" id="modal-rec-base" class="reconcile-input bg-gray-100 cursor-not-allowed" readonly></div>
                 <div class="reconcile-row"><label class="font-medium w-1/3">➖ 对账调节项:</label><input type="number" id="modal-rec-other" class="reconcile-input bg-gray-100 cursor-not-allowed" readonly></div>
-                <div class="text-xs text-gray-400 text-right mb-2">* 请在“全局费用设置”中修改基准金与调节项</div>
-                <div class="reconcile-row bg-gray-100 p-2 rounded"><label class="font-bold w-1/3 text-gray-700">App 计算净值:</label><span id="rec-app-net" class="font-bold font-mono text-lg"></span></div>
+                
+                <div class="mt-4"><button type="button" onclick="toggleRecDetails()" class="text-xs text-blue-600 hover:underline flex items-center gap-1"><span id="rec-detail-icon">▶</span> 查看持仓明细 (用于排查)</button><div id="rec-detail-table" class="hidden mt-2 border rounded overflow-hidden"><table class="w-full text-xs text-left bg-gray-50"><thead class="bg-gray-100"><tr><th class="p-2">合约</th><th class="p-2 text-right">数量</th><th class="p-2 text-right">MTM</th><th class="p-2 text-right">浮动P/L</th></tr></thead><tbody id="rec-detail-body"></tbody></table></div></div>
+
+                <div class="reconcile-row bg-gray-100 p-2 rounded mt-4"><label class="font-bold w-1/3 text-gray-700">App 计算净值:</label><span id="rec-app-net" class="font-bold font-mono text-lg"></span></div>
                 <hr class="border-gray-300 border-dashed my-4">
                 <div class="reconcile-row"><label class="font-bold w-1/3 text-blue-800">📝 水单 Total P/L (输入):</label><input type="number" id="rec-statement-val" class="reconcile-input border-blue-300 focus:ring-blue-500" placeholder="输入水单X列总和" onkeyup="calcReconcile()"></div>
                 <div class="mt-6 p-4 rounded-lg text-center" id="rec-result-box"><div class="text-sm text-gray-500 mb-1">差异金额 (水单 - App)</div><div id="rec-diff-val" class="text-3xl font-bold font-mono">0.00</div><div id="rec-status-text" class="text-sm font-semibold mt-2"></div></div>
@@ -195,6 +233,66 @@
             <div class="flex justify-end space-x-3 mt-6"><button onclick="closeReconcileModal()" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-400">关闭</button></div>
         </div>
     </div>
+    
+    <!-- NEW v7.1: Dashboard Modal -->
+    <div id="dashboard-modal" class="modal-backdrop hidden">
+        <div class="modal-content w-full max-w-4xl bg-gray-50">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">📊 综合复盘看板</h2>
+                    <p class="text-sm text-gray-500 mt-1" id="dash-date-display"></p>
+                </div>
+                <button onclick="closeDashboardModal()" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="dash-card bg-white shadow-sm border-l-4 border-green-500">
+                    <div class="dash-label">当日实现盈亏 (Realized)</div>
+                    <div class="dash-val text-green-600" id="dash-realized"></div>
+                </div>
+                <div class="dash-card bg-white shadow-sm border-l-4 border-blue-500">
+                    <div class="dash-label">当前总浮动盈亏 (Floating)</div>
+                    <div class="dash-val text-blue-600" id="dash-floating"></div>
+                </div>
+                <div class="dash-card bg-white shadow-sm border-l-4 border-purple-500">
+                    <div class="dash-label">当日交易笔数</div>
+                    <div class="dash-val text-purple-600" id="dash-tx-count"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Today's Closed Trades -->
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">📉 当日平仓明细</h3>
+                    <div class="overflow-y-auto max-h-60">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-gray-50 sticky top-0 text-gray-500"><tr><th class="p-2">合约</th><th class="p-2">方向</th><th class="p-2 text-right">平仓量</th><th class="p-2 text-right">P/L</th></tr></thead>
+                            <tbody id="dash-closed-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Current Positions Summary -->
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">📦 当前持仓汇总</h3>
+                    <div class="overflow-y-auto max-h-60">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-gray-50 sticky top-0 text-gray-500"><tr><th class="p-2">品种</th><th class="p-2 text-right">净持仓</th><th class="p-2 text-right">加权均价</th><th class="p-2 text-right">浮动P/L</th></tr></thead>
+                            <tbody id="dash-pos-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                <button onclick="exportDashboardReport()" class="bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 flex items-center gap-2 text-sm font-bold shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    导出看板报告 (.txt)
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="batch-import-modal" class="modal-backdrop hidden">
         <div class="modal-content max-w-4xl w-full">
             <h2 class="text-xl font-bold mb-2">智能文本批量导入 (极速版)</h2>
@@ -209,7 +307,7 @@
     </div>
 
 <script>
-// ==================== 1. CONFIGURATION & STATE ====================
+// ==================== 1. CONFIGURATION ====================
 function generateContracts(start, end) {
     return ['2602','2603','2604','2605','2606','2607','2608','2609','2610','2611','2612','2701','2702','2703','26Q4','27Q1'];
 }
@@ -225,59 +323,29 @@ const config = {
     colors: { 'Brent': 'badge-brent', 'Henry Hub': 'badge-hh', 'JKM': 'badge-jkm', 'TTF': 'badge-ttf' }
 };
 
+// ==================== 2. GLOBAL STATE ====================
 let state = {
     positions: [], history: [], transactionLog: [], marketPrices: {},
-    settings: { fees: { brentPerBbl: 0, hhPerMMBtu: 0 }, exchangeRateRMB: 7.13, initialRealizedPL: 0, reconciliation: { base: 156170, other: 45800 }, ttfMultiplier: 3412 }
+    settings: { 
+        fees: { brentPerBbl: 0, hhPerMMBtu: 0 }, 
+        exchangeRateRMB: 7.13, 
+        initialRealizedPL: 0,
+        reconciliation: { base: 156170, other: 45800 },
+        ttfMultiplier: 3412
+    },
+    filterDate: null
 };
 let positionChart = null, plChart = null, parsedTradesBuffer = [];
 
-// ==================== 2. BASE UTILITIES (Hoist First) ====================
-function getPricePrecision(product) { return product === 'Henry Hub' ? 4 : 2; }
-function formatPrice(price, product) { if (typeof price !== 'number') return 'N/A'; return price.toFixed(getPricePrecision(product)); }
-function saveState() { localStorage.setItem('tradeAppState', JSON.stringify(state)); }
-function loadState() { const s = localStorage.getItem('tradeAppState'); if (s) state = JSON.parse(s); }
-function formatDateForExport(isoString, includeTime = true) { 
-    try { const date = new Date(isoString); const YYYY = date.getFullYear(); const MM = String(date.getMonth() + 1).padStart(2, '0'); const DD = String(date.getDate()).padStart(2, '0'); if (!includeTime) return `${YYYY}-${MM}-${DD}`; const hh = String(date.getHours()).padStart(2, '0'); const mm = String(date.getMinutes()).padStart(2, '0'); const ss = String(date.getSeconds()).padStart(2, '0'); return `${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}`; } catch(e) { return isoString; }
-}
-
-// ==================== 3. MODAL CONTROLS ====================
-function openInfoModal(t, b) { document.getElementById('confirm-title').textContent = t; document.getElementById('confirm-body').textContent = b; document.getElementById('confirm-action-btn').onclick = closeActionConfirmModal; document.getElementById('confirm-action-btn').textContent = '好的'; document.getElementById('confirm-cancel-btn').classList.add('hidden'); document.getElementById('action-confirm-modal').classList.remove('hidden'); }
-function openConfirmModal(t, b, fn) { document.getElementById('confirm-title').textContent = t; document.getElementById('confirm-body').textContent = b; document.getElementById('confirm-action-btn').onclick = fn; document.getElementById('confirm-action-btn').textContent = '确认'; document.getElementById('confirm-cancel-btn').classList.remove('hidden'); document.getElementById('action-confirm-modal').classList.remove('hidden'); }
-function closeActionConfirmModal() { document.getElementById('action-confirm-modal').classList.add('hidden'); }
-function openEditModal(i) { document.getElementById('edit-index').value = i; document.getElementById('edit-modal').classList.remove('hidden'); }
-function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
-function handleEditSubmit(e) { e.preventDefault(); openInfoModal('提示', '为保证数据一致性，请通过撤销功能修改交易。'); closeEditModal(); }
-function openBatchImportModal() { document.getElementById('batch-input').value = ''; document.getElementById('import-preview-container').classList.add('hidden'); document.getElementById('batch-import-modal').classList.remove('hidden'); }
-function closeBatchImportModal() { document.getElementById('batch-import-modal').classList.add('hidden'); parsedTradesBuffer = []; }
-function openReconcileModal() {
-    const historyPL = state.history.reduce((a,b)=>a+b.realizedPL,0); const totalR = (state.settings.initialRealizedPL||0)+historyPL;
-    let totalF = 0; state.positions.forEach(p=>{ 
-        const c=state.marketPrices[p.contract]||(p.totalValue/p.quantity); 
-        const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product];
-        const g=(c*p.quantity*mult)-(p.totalValue*mult); 
-        const f=p.product==='Brent'?state.settings.fees.brentPerBbl:state.settings.fees.hhPerMMBtu; 
-        totalF+=(g-(Math.abs(p.quantity)*mult*f)); 
-    });
-    
-    const recSettings = state.settings.reconciliation || { base: 156170, other: 45800 };
-    document.getElementById('modal-rec-base').value = recSettings.base;
-    document.getElementById('modal-rec-other').value = recSettings.other;
-    
-    document.getElementById('rec-app-realized').textContent = `$${totalR.toFixed(2)}`; document.getElementById('rec-app-floating').textContent = `$${totalF.toFixed(2)}`;
-    calcReconcile(); document.getElementById('reconcile-modal').classList.remove('hidden');
-}
-function closeReconcileModal() { document.getElementById('reconcile-modal').classList.add('hidden'); }
-function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); }
-function copyReportToClipboard() { navigator.clipboard.writeText(document.getElementById('daily-report-content').textContent); alert('已复制'); }
-
-// ==================== 4. CORE LOGIC ====================
+// ==================== 3. INITIALIZATION & UTILS ====================
 function hydrateState() {
     if(!state.positions) state.positions=[]; if(!state.history) state.history=[]; 
     if(!state.transactionLog) state.transactionLog=[]; if(!state.marketPrices) state.marketPrices={};
     if(!state.settings) state.settings={ fees:{brentPerBbl:0, hhPerMMBtu:0}, exchangeRateRMB:7.13, initialRealizedPL:0, reconciliation: { base: 156170, other: 45800 }, ttfMultiplier: 3412 };
     if(!state.settings.reconciliation) state.settings.reconciliation = { base: 156170, other: 45800 }; 
     if(!state.settings.ttfMultiplier) state.settings.ttfMultiplier = 3412;
-    state.transactionLog.forEach(l => { if(!l.id) l.id=Date.now()+Math.random(); if(!l.status) l.status='active'; });
+    state.transactionLog.forEach(l => { if(!l.id) l.id=Date.now()+Math.random(); if(!l.status) l.status='active'; if(!l.type) l.type = 'regular'; });
+    state.filterDate = null; 
 }
 
 function initializeUI() {
@@ -291,43 +359,69 @@ function initializeUI() {
     document.getElementById('ttf-multiplier').value = state.settings.ttfMultiplier;
 }
 
-function rebuildStateFromLogs() {
-    const logs = state.transactionLog.filter(l => l.status === 'active').sort((a,b) => new Date(a.date) - new Date(b.date));
-    const tempPos = {}; state.history = [];
-    logs.forEach(l => {
-        const k = `${l.trader}-${l.product}-${l.contract}`;
-        if(!tempPos[k]) tempPos[k] = { key: k, trader: l.trader, product: l.product, contract: l.contract, quantity: 0, totalValue: 0 };
-        let p = tempPos[k];
-        const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
-        
-        if(p.quantity !== 0 && Math.sign(p.quantity) !== Math.sign(l.quantity)) {
-            const closeQty = Math.min(Math.abs(p.quantity), Math.abs(l.quantity));
-            const dir = Math.sign(p.quantity);
-            const mult = l.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[l.product];
-            
-            if(l.type === 'regular' || !l.type) {
-                const gross = (l.price - avg) * closeQty * dir * mult;
-                const feeRate = l.product==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-                const cost = closeQty * mult * 2 * feeRate;
-                state.history.push({ date: l.date, trader: l.trader, product: l.product, contract: l.contract, closedQuantity: closeQty * dir * -1, openPrice: avg, closePrice: l.price, realizedPL: gross - cost });
-                const frac = (Math.abs(p.quantity) - closeQty) / Math.abs(p.quantity);
-                p.totalValue *= frac;
-                p.quantity += l.quantity; 
-            } else {
-                p.totalValue += l.quantity * l.price;
-                p.quantity += l.quantity;
-            }
-        } else {
-            p.totalValue += l.quantity * l.price;
-            p.quantity += l.quantity;
-        }
-    });
-    state.positions = Object.values(tempPos).filter(p => Math.abs(p.quantity) > 0.0001);
+function getPricePrecision(product) { return product === 'Henry Hub' ? 4 : 2; }
+function formatPrice(price, product) { if (typeof price !== 'number') return 'N/A'; return price.toFixed(getPricePrecision(product)); }
+function saveState() { localStorage.setItem('tradeAppState', JSON.stringify(state)); }
+function loadState() { const s = localStorage.getItem('tradeAppState'); if (s) state = JSON.parse(s); }
+function formatDateForExport(isoString, includeTime = true) { 
+    try { const date = new Date(isoString); const YYYY = date.getFullYear(); const MM = String(date.getMonth() + 1).padStart(2, '0'); const DD = String(date.getDate()).padStart(2, '0'); if (!includeTime) return `${YYYY}-${MM}-${DD}`; const hh = String(date.getHours()).padStart(2, '0'); const mm = String(date.getMinutes()).padStart(2, '0'); const ss = String(date.getSeconds()).padStart(2, '0'); return `${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}`; } catch(e) { return isoString; }
 }
 
-// --- ACTIONS ---
+// ==================== 4. MODALS ====================
+function openInfoModal(t, b) { document.getElementById('confirm-title').textContent = t; document.getElementById('confirm-body').textContent = b; document.getElementById('confirm-action-btn').onclick = closeActionConfirmModal; document.getElementById('confirm-action-btn').textContent = '好的'; document.getElementById('confirm-cancel-btn').classList.add('hidden'); document.getElementById('action-confirm-modal').classList.remove('hidden'); }
+function openConfirmModal(t, b, fn) { document.getElementById('confirm-title').textContent = t; document.getElementById('confirm-body').textContent = b; document.getElementById('confirm-action-btn').onclick = fn; document.getElementById('confirm-action-btn').textContent = '确认'; document.getElementById('confirm-cancel-btn').classList.remove('hidden'); document.getElementById('action-confirm-modal').classList.remove('hidden'); }
+function closeActionConfirmModal() { document.getElementById('action-confirm-modal').classList.add('hidden'); }
+function openEditModal(i) { document.getElementById('edit-index').value = i; document.getElementById('edit-modal').classList.remove('hidden'); }
+function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+function handleEditSubmit(e) { e.preventDefault(); openInfoModal('提示', '为保证数据一致性，请通过撤销功能修改交易。'); closeEditModal(); }
+function openBatchImportModal() { document.getElementById('batch-input').value = ''; document.getElementById('import-preview-container').classList.add('hidden'); document.getElementById('batch-import-modal').classList.remove('hidden'); }
+function closeBatchImportModal() { document.getElementById('batch-import-modal').classList.add('hidden'); parsedTradesBuffer = []; }
+
+// v6.9 Reconciliation with Details
+function openReconcileModal() {
+    let historyPL = 0;
+    const relevantHistory = state.filterDate 
+        ? state.history.filter(h => h.date >= state.filterDate) 
+        : state.history;
+    historyPL = relevantHistory.reduce((a,b)=>a+b.realizedPL,0);
+    const totalR = (state.filterDate ? 0 : (state.settings.initialRealizedPL||0)) + historyPL;
+    
+    let totalF = 0; 
+    let detailHtml = '';
+    state.positions.forEach(p=>{ 
+        const c=state.marketPrices[p.contract]||(p.totalValue/p.quantity); 
+        const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product];
+        const g=(c*p.quantity*mult)-(p.totalValue*mult); 
+        const f=p.product==='Brent'?state.settings.fees.brentPerBbl:state.settings.fees.hhPerMMBtu; 
+        const net = g-(Math.abs(p.quantity)*mult*f);
+        totalF+=net; 
+        detailHtml += `<tr class="border-b"><td class="p-2">${p.contract}</td><td class="p-2 text-right">${p.quantity.toFixed(3)}</td><td class="p-2 text-right">${c.toFixed(2)}</td><td class="p-2 text-right ${net>=0?'text-green-600':'text-red-600'}">${net.toFixed(0)}</td></tr>`;
+    });
+    
+    const recSettings = state.settings.reconciliation || { base: 156170, other: 45800 };
+    document.getElementById('modal-rec-base').value = recSettings.base;
+    document.getElementById('modal-rec-other').value = recSettings.other;
+    document.getElementById('rec-app-realized').textContent = `$${totalR.toFixed(2)}`; 
+    document.getElementById('rec-app-floating').textContent = `$${totalF.toFixed(2)}`;
+    document.getElementById('rec-detail-body').innerHTML = detailHtml;
+    
+    calcReconcile(); document.getElementById('reconcile-modal').classList.remove('hidden');
+}
+
+function toggleRecDetails() {
+    const el = document.getElementById('rec-detail-table');
+    const icon = document.getElementById('rec-detail-icon');
+    if (el.classList.contains('hidden')) { el.classList.remove('hidden'); icon.textContent = '▼'; } else { el.classList.add('hidden'); icon.textContent = '▶'; }
+}
+function closeReconcileModal() { document.getElementById('reconcile-modal').classList.add('hidden'); }
+function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); }
+function closeDashboardModal() { document.getElementById('dashboard-modal').classList.add('hidden'); }
+function copyReportToClipboard() { navigator.clipboard.writeText(document.getElementById('daily-report-content').textContent); alert('已复制'); }
+
+// ==================== 5. ACTIONS & LOGIC ====================
 function handleTradeSubmit(e) {
     e.preventDefault();
+    if(state.filterDate) return alert("请先清除筛选");
     const t = document.getElementById('trader').value;
     const p = document.getElementById('product').value;
     const c = document.getElementById('contract').value;
@@ -347,15 +441,16 @@ function addTransaction(trader, product, contract, qty, price, type) {
 function updateUI() { rebuildStateFromLogs(); saveState(); renderAll(); }
 
 function reverseTrade(id) {
+    if(state.filterDate) return alert("筛选模式下不可修改");
     const log = state.transactionLog.find(l => l.id === id);
     if(log && confirm(`确认撤销 ${log.contract} ${log.quantity} @ ${log.price}?`)) {
         log.status = 'reversed'; updateUI();
     }
 }
 function reverseTradeByPos(key) {
+    if(state.filterDate) return alert("筛选模式下不可修改");
     const log = state.transactionLog.slice().reverse().find(l => `${l.trader}-${l.product}-${l.contract}` === key && l.status === 'active');
-    if(log) reverseTrade(log.id);
-    else alert("未找到可撤销的交易记录");
+    if(log) reverseTrade(log.id); else alert("未找到可撤销的交易记录");
 }
 
 function updateSettings() {
@@ -406,7 +501,65 @@ function calcReconcile() {
     else { bEl.className='mt-6 p-4 rounded-lg text-center bg-red-100 text-red-800'; tEl.textContent='❌ 存在差异'; }
 }
 
-// --- COMPLEX PARSING LOGIC v6.7 (Optimized Batch) ---
+// v7.0: Period Filter Logic
+function applyDateFilter() {
+    const dateVal = document.getElementById('filter-date-input').value;
+    if (!dateVal) return alert("请选择日期");
+    state.filterDate = dateVal;
+    document.body.classList.add('filter-mode');
+    document.getElementById('filter-banner').style.display = 'flex';
+    document.getElementById('filter-date-display').textContent = dateVal;
+    updateUI();
+}
+
+function clearDateFilter() {
+    state.filterDate = null;
+    document.getElementById('filter-date-input').value = '';
+    document.body.classList.remove('filter-mode');
+    document.getElementById('filter-banner').style.display = 'none';
+    updateUI();
+}
+
+// --- CORE STATE CALCULATION ---
+function rebuildStateFromLogs() {
+    // Process ALL logs to get correct Positions. No filtering here.
+    const logs = state.transactionLog.filter(l => l.status === 'active').sort((a,b) => new Date(a.date) - new Date(b.date));
+    const tempPos = {}; state.history = [];
+    logs.forEach(l => {
+        const k = `${l.trader}-${l.product}-${l.contract}`;
+        if(!tempPos[k]) tempPos[k] = { key: k, trader: l.trader, product: l.product, contract: l.contract, quantity: 0, totalValue: 0 };
+        let p = tempPos[k];
+        const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
+        
+        if(p.quantity !== 0 && Math.sign(p.quantity) !== Math.sign(l.quantity)) {
+            const closeQty = Math.min(Math.abs(p.quantity), Math.abs(l.quantity));
+            const dir = Math.sign(p.quantity);
+            const mult = l.product === 'TTF' ? (state.settings.ttfMultiplier || 3412) : config.contractMultipliers[l.product];
+            
+            if(l.type === 'regular' || !l.type) {
+                const gross = (l.price - avg) * closeQty * dir * mult;
+                const feeRate = l.product==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
+                const cost = closeQty * mult * 2 * feeRate;
+                state.history.push({ 
+                    date: l.date, trader: l.trader, product: l.product, contract: l.contract,
+                    closedQuantity: closeQty * dir * -1, openPrice: avg, closePrice: l.price, realizedPL: gross - cost 
+                });
+                const frac = (Math.abs(p.quantity) - closeQty) / Math.abs(p.quantity);
+                p.totalValue *= frac;
+                p.quantity += l.quantity; 
+            } else {
+                p.totalValue += l.quantity * l.price;
+                p.quantity += l.quantity;
+            }
+        } else {
+            p.totalValue += l.quantity * l.price;
+            p.quantity += l.quantity;
+        }
+    });
+    state.positions = Object.values(tempPos).filter(p => Math.abs(p.quantity) > 0.0001);
+}
+
+// --- PARSER ---
 function parseImportText() {
     const text = document.getElementById('batch-input').value;
     const rawLines = text.split('\n').filter(l => l.trim());
@@ -479,9 +632,8 @@ function parseImportText() {
         } catch(e) { console.error(e); }
     });
     
-    // Optimized Render for Preview
-    const rowsHtml = parsedTradesBuffer.map(t => `<tr class="border-b"><td class="px-2">✅</td><td>${t.trader}</td><td>${t.product}</td><td>${t.contract}</td><td>${t.side>0?'买':'卖'}</td><td>${Math.abs(t.quantity)}</td><td>${t.price}</td></tr>`).join('');
-    document.getElementById('import-preview-body').innerHTML = rowsHtml;
+    const tbody = document.getElementById('import-preview-body'); tbody.innerHTML = '';
+    parsedTradesBuffer.forEach(t => { tbody.innerHTML += `<tr class="border-b"><td class="px-2">✅</td><td>${t.trader}</td><td>${t.product}</td><td>${t.contract}</td><td>${t.side>0?'买':'卖'}</td><td>${Math.abs(t.quantity)}</td><td>${t.price}</td></tr>`; });
     document.getElementById('btn-batch-submit').disabled = validCount === 0; document.getElementById('import-preview-container').classList.remove('hidden');
 }
 function batchSubmitTrades() {
@@ -489,15 +641,185 @@ function batchSubmitTrades() {
     updateUI(); closeBatchImportModal(); openInfoModal('成功', `已导入 ${parsedTradesBuffer.length} 条交易`);
 }
 
-// --- RENDER & EXPORT ---
+// v7.1 AI Export Function
+function exportNotebookLMData() {
+    let content = "# 交易分析上下文数据 (v7.1)\n\n";
+    content += "## 1. 账户概览\n";
+    content += `- 生成时间: ${new Date().toLocaleString()}\n`;
+    
+    // Aggregate by Product for AI Context
+    const grouped = state.positions.reduce((acc, p) => { (acc[p.product] = acc[p.product] || []).push(p); return acc; }, {});
+    let summaryText = "";
+    Object.keys(grouped).forEach(prod => {
+        const rows = grouped[prod];
+        const netQty = rows.reduce((acc, p) => acc + p.quantity, 0);
+        const totalCost = rows.reduce((acc, p) => acc + (p.totalValue * config.contractMultipliers[prod]), 0);
+        const wAvg = Math.abs(netQty) > 0.001 ? (totalCost / (netQty * config.contractMultipliers[prod])) : 0;
+        summaryText += `- ${prod}: 净持仓 ${netQty.toFixed(3)} 手, 加权均价 ${wAvg.toFixed(4)}\n`;
+    });
+    
+    const totalRealized = (state.settings.initialRealizedPL || 0) + state.history.reduce((acc, h) => acc + h.realizedPL, 0);
+    content += summaryText;
+    content += `- 累计实现盈亏: $${totalRealized.toFixed(2)}\n\n`;
+
+    content += "## 2. 历史平仓记录 (最近50笔)\n";
+    const recentHistory = [...state.history].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
+    recentHistory.forEach(h => {
+        content += `- ${new Date(h.date).toLocaleDateString()}: ${h.trader} 平仓 ${h.contract} ${h.closedQuantity.toFixed(3)}手, 盈亏 $${h.realizedPL.toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "trading_context_for_ai.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// v7.1: New Dashboard Logic
+function generateDailyReport() {
+    openDashboardModal();
+}
+
+function openDashboardModal() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dash-date-display').textContent = `📅 ${today}`;
+    
+    // 1. Calculate Realized PL for Today
+    const todayHistory = state.history.filter(h => h.date.startsWith(today));
+    const realizedToday = todayHistory.reduce((acc, h) => acc + h.realizedPL, 0);
+    const dashRealized = document.getElementById('dash-realized');
+    dashRealized.textContent = `$${realizedToday.toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+    dashRealized.className = `dash-val ${realizedToday >= 0 ? 'text-green-600' : 'text-red-600'}`;
+    
+    // 2. Closed Trades List
+    const closedBody = document.getElementById('dash-closed-body');
+    closedBody.innerHTML = '';
+    if (todayHistory.length === 0) {
+        closedBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">今日暂无平仓记录</td></tr>';
+    } else {
+        todayHistory.forEach(h => {
+            const plClass = h.realizedPL >= 0 ? 'text-green-600' : 'text-red-600';
+            const dir = h.closedQuantity > 0 ? 'Short平' : 'Long平'; // closedQty > 0 means we BOUGHT to close a SHORT? No.
+            // In history: closedQuantity = closedQty * dir * -1.
+            // If we closed a Long position (dir=1), closedQuantity is negative (Selling).
+            // So if closedQuantity < 0, it's "Sell Close" (Long Exit). If > 0, "Buy Close" (Short Exit).
+            const op = h.closedQuantity < 0 ? '卖平(Long)' : '买平(Short)';
+            
+            closedBody.innerHTML += `
+                <tr class="border-b">
+                    <td class="p-2 font-mono">${h.contract}</td>
+                    <td class="p-2 text-xs">${op}</td>
+                    <td class="p-2 text-right">${Math.abs(h.closedQuantity).toFixed(1)}</td>
+                    <td class="p-2 text-right font-bold ${plClass}">${h.realizedPL.toFixed(0)}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // 3. Current Positions Summary
+    let totalFloating = 0;
+    const posBody = document.getElementById('dash-pos-body');
+    posBody.innerHTML = '';
+    
+    // Group by Product
+    const grouped = state.positions.reduce((acc, p) => { (acc[p.product] = acc[p.product] || []).push(p); return acc; }, {});
+    
+    Object.keys(grouped).forEach(prod => {
+        const rows = grouped[prod];
+        let subQty = 0;
+        let subCost = 0;
+        let subFloating = 0;
+        
+        rows.forEach(p => {
+            const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
+            const mtm = state.marketPrices[p.contract] || avg;
+            const mult = prod === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[prod] || 1000;
+            const gross = (mtm * p.quantity * mult) - (p.totalValue * mult);
+            const feeRate = prod==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
+            const fee = Math.abs(p.quantity) * mult * feeRate;
+            const net = gross - fee;
+            
+            subQty += p.quantity;
+            subCost += p.totalValue * mult;
+            subFloating += net;
+        });
+        totalFloating += subFloating;
+        
+        const wAvg = Math.abs(subQty) > 0.001 ? (subCost / (subQty * (prod === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[prod]))) : 0;
+        const plClass = subFloating >= 0 ? 'text-green-600' : 'text-red-600';
+        
+        posBody.innerHTML += `
+            <tr class="border-b">
+                <td class="p-2 font-bold">${prod}</td>
+                <td class="p-2 text-right font-mono">${subQty.toFixed(3)}</td>
+                <td class="p-2 text-right text-gray-500">${wAvg.toFixed(3)}</td>
+                <td class="p-2 text-right font-bold ${plClass}">${subFloating.toFixed(0)}</td>
+            </tr>
+        `;
+    });
+    
+    const dashFloating = document.getElementById('dash-floating');
+    dashFloating.textContent = `$${totalFloating.toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+    dashFloating.className = `dash-val ${totalFloating >= 0 ? 'text-blue-600' : 'text-red-600'}`; // Blue/Red for floating
+    
+    document.getElementById('dash-tx-count').textContent = state.transactionLog.filter(l => l.status==='active' && l.date.startsWith(today)).length;
+
+    document.getElementById('dashboard-modal').classList.remove('hidden');
+}
+
+function exportDashboardReport() {
+    // Generate a text version of the dashboard
+    const today = new Date().toISOString().split('T')[0];
+    let txt = `=== 交易复盘看板 [${today}] ===\n\n`;
+    
+    const rVal = document.getElementById('dash-realized').textContent;
+    const fVal = document.getElementById('dash-floating').textContent;
+    txt += `当日实现盈亏: ${rVal}\n`;
+    txt += `当前浮动盈亏: ${fVal}\n\n`;
+    
+    txt += `--- 当日平仓明细 ---\n`;
+    // Re-calculate for export to ensure data freshness
+    const todayHistory = state.history.filter(h => h.date.startsWith(today));
+    if (todayHistory.length === 0) txt += "无\n";
+    else {
+        todayHistory.forEach(h => {
+             txt += `${h.contract} | ${h.closedQuantity.toFixed(1)}手 | 盈亏: ${h.realizedPL.toFixed(0)}\n`;
+        });
+    }
+    
+    txt += `\n--- 持仓汇总 ---\n`;
+    const grouped = state.positions.reduce((acc, p) => { (acc[p.product] = acc[p.product] || []).push(p); return acc; }, {});
+    Object.keys(grouped).forEach(prod => {
+        const rows = grouped[prod];
+        const netQty = rows.reduce((acc, p) => acc + p.quantity, 0);
+        const subFloating = rows.reduce((acc, p) => {
+             const mtm = state.marketPrices[p.contract] || (p.totalValue / p.quantity);
+             const mult = prod === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[prod];
+             return acc + ((mtm * p.quantity * mult) - (p.totalValue * mult)); // Gross Approx
+        }, 0);
+        txt += `${prod}: 净持仓 ${netQty.toFixed(3)} | 浮动 ${subFloating.toFixed(0)}\n`;
+    });
+
+    const blob = new Blob([txt], {type:'text/plain'});
+    const link = document.createElement('a');
+    link.href=URL.createObjectURL(blob);
+    link.download = `dashboard_${today}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+
+// --- RENDER & INIT (Moved to end) ---
 function renderAll() {
     renderPositions(); renderLogs(); renderHistory(); 
     document.getElementById('pos-count-badge').textContent = state.positions.length;
 }
 
 function renderPositions() {
-    const tbody = document.getElementById('positions-table'); 
-    let html = '';
+    const tbody = document.getElementById('positions-table'); tbody.innerHTML = '';
     let totalF = 0, grandNetQty = 0;
     const grouped = state.positions.reduce((acc, p) => { (acc[p.product] = acc[p.product] || []).push(p); return acc; }, {});
     
@@ -520,7 +842,7 @@ function renderPositions() {
         const badgeClass = config.colors[prod] || 'badge-brent';
         const plColor = subPL >= 0 ? 'text-green-600' : 'text-red-600';
 
-        html += `
+        tbody.innerHTML += `
             <tr class="subtotal-row border-b border-t border-gray-200">
                 <td class="px-4 py-2"><span class="badge ${badgeClass}">${prod}</span></td>
                 <td class="px-4 py-2 text-xs uppercase">SUBTOTAL</td>
@@ -532,7 +854,7 @@ function renderPositions() {
                 <td colspan="2"></td>
             </tr>`;
 
-        rows.forEach((p) => {
+        rows.forEach((p, idx) => {
             const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
             const mtm = state.marketPrices[p.contract] || avg;
             const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product] || 1000;
@@ -544,12 +866,11 @@ function renderPositions() {
             else if(p.product === 'Henry Hub') landed = (avg * 1.15 + 4.5) * rmb / 28.3;
             const uniqueId = `${p.key}`; 
             
-            // Add Unit
             const unit = p.product === 'Brent' ? 'bbl' : (p.product === 'TTF' ? 'MWh' : 'MMBtu');
             const dirBadge = p.quantity > 0 ? '<span class="badge badge-long">Long</span>' : '<span class="badge badge-short">Short</span>';
             const plClass = net >= 0 ? 'text-green-600' : 'text-red-600';
             
-            html += `
+            tbody.innerHTML += `
                 <tr class="border-b table-row-hover transition-colors bg-white">
                     <td class="px-4 py-3 font-medium pl-8 border-l-4 border-transparent hover:border-indigo-200">${p.trader}</td>
                     <td class="px-4 py-3 font-mono">${p.contract} <span class="text-xs text-gray-300 ml-1">${unit}</span></td>
@@ -564,7 +885,6 @@ function renderPositions() {
         });
     });
     
-    tbody.innerHTML = html;
     document.getElementById('total-floating-pl').textContent = totalF.toLocaleString('en-US', {style:'currency', currency:'USD'});
     document.getElementById('total-floating-pl').className = `px-4 py-3 text-right font-bold text-lg ${totalF>=0?'text-green-600':'text-red-600'}`;
     document.getElementById('total-net-qty').textContent = grandNetQty.toFixed(3);
@@ -572,25 +892,37 @@ function renderPositions() {
 
 function renderLogs() {
     const tbody = document.getElementById('log-table'); 
-    // Limit to last 500 for performance
-    const logs = state.transactionLog.filter(l => l.status === 'active').sort((a,b) => b.date.localeCompare(a.date)).slice(0, 500);
-    const html = logs.map(l => `<tr class="border-b hover:bg-gray-50"><td class="px-2 py-2">${l.date.substring(5,16).replace('T',' ')}</td><td class="font-bold text-xs">${l.trader}</td><td>${l.contract}</td><td class="${l.quantity>0?'text-green-600':'text-red-600'}">${l.quantity}</td><td>${l.price}</td><td><button onclick="reverseTrade(${l.id})" class="text-gray-400 hover:text-red-500">×</button></td></tr>`).join('');
+    
+    // v7.0: Filter logs by start date if active
+    let logs = state.transactionLog.filter(l => l.status === 'active');
+    if (state.filterDate) {
+        logs = logs.filter(l => l.date >= state.filterDate);
+    }
+    
+    const visibleLogs = logs.sort((a,b) => b.date.localeCompare(a.date)).slice(0, 500);
+    const html = visibleLogs.map(l => `<tr class="border-b hover:bg-gray-50"><td class="px-2 py-2">${l.date.substring(5,16).replace('T',' ')}</td><td class="font-bold text-xs">${l.trader}</td><td>${l.contract}</td><td class="${l.quantity>0?'text-green-600':'text-red-600'}">${l.quantity}</td><td>${l.price}</td><td><button onclick="reverseTrade(${l.id})" class="text-gray-400 hover:text-red-500">×</button></td></tr>`).join('');
     tbody.innerHTML = html;
 }
+
 function renderHistory() {
     const tbody = document.getElementById('history-table'); 
-    let total = state.settings.initialRealizedPL || 0;
-    const history = [...state.history].sort((a,b) => new Date(b.date) - new Date(a.date));
-    const recent = history.slice(0, 500);
+    let total = state.filterDate ? 0 : (state.settings.initialRealizedPL || 0); 
     
-    // Calc total from full history, render only recent
+    let history = [...state.history].sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    if (state.filterDate) {
+        history = history.filter(h => h.date >= state.filterDate);
+    }
+    
     history.forEach(h => total += h.realizedPL);
     
+    const recent = history.slice(0, 500);
     const html = recent.map(h => `<tr class="border-b hover:bg-gray-50"><td class="px-2 py-2">${h.date.split('T')[0].substring(5)}</td><td>${h.contract}</td><td>${h.closedQuantity.toFixed(1)}</td><td class="font-bold ${h.realizedPL>=0?'text-green-600':'text-red-600'}">${h.realizedPL.toFixed(0)}</td></tr>`).join('');
     tbody.innerHTML = html;
     document.getElementById('total-realized-pl').textContent = total.toLocaleString('en-US', {style:'currency', currency:'USD'});
 }
 
+// --- CSV EXPORT ---
 function exportData() {
     const dataStr = JSON.stringify(state, null, 2); const blob = new Blob([dataStr], {type: "application/json"}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `trade_data_export_${new Date().toISOString()}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href);
 }
@@ -602,15 +934,10 @@ function importMtmData(event) {
     const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = function(e) { try { const importedData = JSON.parse(e.target.result); if (!importedData.marketPrices) throw new Error("缺少 marketPrices"); const newPrices = importedData.marketPrices; for (const [contract, price] of Object.entries(newPrices)) { state.marketPrices[contract] = parseFloat(price); } updateUI(); openInfoModal('成功', '行情更新成功'); } catch (error) { openInfoModal('失败', error.message); } }; reader.readAsText(file); event.target.value = '';
 }
-function exportLedgerCSV() {
-    const headers = ["日期", "品种", "合约", "当日开仓", "开仓均价", "当日平仓", "平仓均价", "期末持仓", "持仓均价", "结算价(MTM)", "当日实现盈亏(USD)", "当日实现盈亏(元)", "未平仓盈亏(USD)", "未平仓盈亏(元)"];
-    const dataRows = []; const activeLogs = state.transactionLog.filter(log => log.status === 'active'); activeLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-    const logsByDay = {}; activeLogs.forEach(log => { const day = formatDateForExport(log.date, false); if (!logsByDay[day]) logsByDay[day] = []; logsByDay[day].push(log); });
-    const rmbRate = state.settings.exchangeRateRMB || 7.13;
-    Object.keys(logsByDay).sort().forEach(day => {
-        dataRows.push({ "日期": day, "品种": "SUMMARY", "合约": "Generated" });
-    });
-    exportToCSV(headers, dataRows, "daily_ledger.csv");
+function exportToCSV(headers, dataRows, fileName) {
+    const csv = [ headers.join(','), ...dataRows.map(row => headers.map(fieldName => { let cell = (row[fieldName] ?? '').toString().replace(/"/g, '""'); if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(',')) ].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url); link.setAttribute("download", fileName); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
 }
 function exportPositionsCSV() {
     const headers = ["合约", "数量", "均价", "MTM", "浮动P/L"]; 
@@ -627,27 +954,24 @@ function exportHistoryCSV() {
     const data = state.history.map(h => ({ "日期": h.date, "合约": h.contract, "盈亏": h.realizedPL }));
     exportToCSV(headers, data, "history.csv");
 }
+function exportLedgerCSV() {
+    const headers = ["日期", "品种", "合约", "当日开仓", "开仓均价", "当日平仓", "平仓均价", "期末持仓", "持仓均价", "结算价(MTM)", "当日实现盈亏(USD)", "当日实现盈亏(元)", "未平仓盈亏(USD)", "未平仓盈亏(元)"];
+    const dataRows = []; const activeLogs = state.transactionLog.filter(log => log.status === 'active'); activeLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const logsByDay = {}; activeLogs.forEach(log => { const day = formatDateForExport(log.date, false); if (!logsByDay[day]) logsByDay[day] = []; logsByDay[day].push(log); });
+    const rmbRate = state.settings.exchangeRateRMB || 7.13;
+    Object.keys(logsByDay).sort().forEach(day => {
+        dataRows.push({ "日期": day, "品种": "SUMMARY", "合约": "Generated" });
+    });
+    exportToCSV(headers, dataRows, "daily_ledger.csv");
+}
 function exportToCSV(headers, data, filename) {
     const csv = [headers.join(',')].concat(data.map(row => headers.map(h => row[h]).join(','))).join('\n');
     const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
-function generateDailyReport() {
-    const today = new Date().toISOString().split('T')[0];
-    const logs = state.transactionLog.filter(l => l.status==='active' && l.date.startsWith(today));
-    const histPL = state.history.filter(h => h.date.startsWith(today)).reduce((a,b)=>a+b.realizedPL,0);
-    let floating = 0; state.positions.forEach(p => { const curr = state.marketPrices[p.contract] || (p.totalValue/p.quantity); floating += ((curr*p.quantity*config.contractMultipliers[p.product]) - (p.totalValue*config.contractMultipliers[p.product])); });
-    document.getElementById('daily-report-content').textContent = `📅 ${today}\n实现盈亏: $${histPL.toFixed(0)}\n浮动盈亏: $${floating.toFixed(0)}\n交易笔数: ${logs.length}`;
-    document.getElementById('report-modal').classList.remove('hidden');
-}
-function exportNotebookLMData() {
-    let txt = `账户概览\n生成时间: ${new Date().toLocaleString()}\n`;
-    state.positions.forEach(p => txt += `${p.product} ${p.contract}: ${p.quantity} @ ${(p.totalValue/p.quantity).toFixed(2)}\n`);
-    const blob = new Blob([txt], {type:'text/plain'}); const link = document.createElement('a'); link.href=URL.createObjectURL(blob); link.download='ai_context.txt'; link.click();
-}
 function runStressTest() { alert("压力测试计算中..."); }
 
-// ==================== 9. EXECUTION ====================
+// --- INIT (At End) ---
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     hydrateState();
@@ -656,6 +980,12 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAll();
     document.getElementById('trade-form').addEventListener('submit', handleTradeSubmit);
     document.getElementById('edit-form').addEventListener('submit', handleEditSubmit);
+    
+    // Init settings in UI from state if exists
+    if(state.settings.reconciliation) {
+        document.getElementById('rec-base-val').value = state.settings.reconciliation.base;
+        document.getElementById('rec-other-val').value = state.settings.reconciliation.other;
+    }
 });
 </script>
 </body>
