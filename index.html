@@ -10,12 +10,12 @@
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .chart-container { position: relative; height: 300px; width: 100%; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-track { background: #0b1220; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #1e3a8a, #14b8a6); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #2563eb, #22d3ee); }
         
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 50; }
-        .modal-content { background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background-color: rgba(15, 23, 42, 0.95); color: #e2e8f0; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 18px 45px rgba(2, 6, 23, 0.6); max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(148, 163, 184, 0.2); }
         
         .badge { display: inline-block; padding: 0.25em 0.6em; font-size: 0.75em; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem; }
         .badge-brent { background-color: #dbeafe; color: #1e40af; }
@@ -34,12 +34,29 @@
         .filter-banner { display: none; }
 
         /* Dashboard Cards */
-        .dash-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; text-align: center; }
-        .dash-val { font-size: 1.5rem; font-weight: 700; font-family: monospace; margin-top: 0.5rem; }
-        .dash-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .dash-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.75rem; padding: 1rem; text-align: center; box-shadow: 0 12px 28px rgba(2, 8, 23, 0.45); }
+        .dash-val { font-size: 1.5rem; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; margin-top: 0.5rem; }
+        .dash-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+
+        /* Futuristic theme */
+        .theme-dark { background: radial-gradient(circle at top, rgba(30, 58, 138, 0.35), rgba(2, 6, 23, 0.95) 55%), linear-gradient(180deg, #0b1120 0%, #020617 100%); }
+        .header-glow { position: relative; }
+        .header-glow::after { content: ""; position: absolute; inset: -10px 15%; background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%); filter: blur(24px); z-index: -1; }
+        .panel { background: rgba(15, 23, 42, 0.78); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 1rem; box-shadow: 0 20px 45px rgba(2, 6, 23, 0.45); backdrop-filter: blur(12px); }
+        .panel-title { color: #e2e8f0; letter-spacing: 0.03em; }
+        .panel-subtle { background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(59, 130, 246, 0.25); }
+        .neon-ring { box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4), 0 0 18px rgba(37, 99, 235, 0.35); }
+        .theme-dark input,
+        .theme-dark select,
+        .theme-dark textarea { background: rgba(15, 23, 42, 0.8); color: #e2e8f0; border-color: rgba(148, 163, 184, 0.35); }
+        .theme-dark input::placeholder { color: #64748b; }
+        .theme-dark table thead { background: rgba(30, 41, 59, 0.8); color: #94a3b8; }
+        .theme-dark table tbody tr { border-color: rgba(148, 163, 184, 0.12); }
+        .theme-dark .table-row-hover:hover { background: rgba(30, 41, 59, 0.6); }
+        .theme-dark .subtotal-row { background: rgba(15, 23, 42, 0.95); color: #cbd5f5; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="theme-dark text-slate-100">
     <!-- Filter Banner -->
     <div id="filter-banner" class="filter-banner fixed top-0 left-0 w-full bg-blue-500 text-white px-4 py-2 justify-between items-center z-50 shadow-md">
         <div class="flex items-center gap-2 font-bold text-sm">
@@ -50,9 +67,10 @@
     </div>
 
     <div class="container mx-auto p-4 md:p-6 max-w-7xl mt-8">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">合约交易分析终端 v7.1</h1>
-            <p class="text-gray-500 mt-2 font-medium">复盘看板版：当日平仓统计 | 综合仪表盘 | 导出报告</p>
+        <header class="text-center mb-10 header-glow">
+            <p class="text-xs uppercase tracking-[0.35em] text-sky-300 font-semibold mb-3">Aurora Trading Systems</p>
+            <h1 class="text-3xl md:text-5xl font-extrabold text-slate-100 tracking-tight">合约交易分析终端 v7.1</h1>
+            <p class="text-slate-400 mt-3 font-medium">复盘看板版：当日平仓统计 | 综合仪表盘 | 导出报告</p>
         </header>
 
         <!-- Main Grid Layout -->
@@ -62,73 +80,73 @@
             <div class="lg:col-span-4 space-y-6">
                 
                 <!-- Period Filter Module -->
-                <div class="bg-blue-50 p-6 rounded-xl shadow-sm border border-blue-100">
-                    <h2 class="text-lg font-bold mb-2 text-blue-900 flex items-center gap-2">
+                <div class="panel panel-subtle p-6">
+                    <h2 class="text-lg font-bold mb-2 text-sky-200 flex items-center gap-2 panel-title">
                         📅 统计周期筛选
                     </h2>
-                    <p class="text-xs text-blue-700 mb-3">设定起始日期，仅统计该日期之后的流水与盈亏。</p>
+                    <p class="text-xs text-slate-300 mb-3">设定起始日期，仅统计该日期之后的流水与盈亏。</p>
                     <div class="flex gap-2">
-                        <input type="date" id="filter-date-input" class="flex-grow p-2 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
-                        <button onclick="applyDateFilter()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium">筛选</button>
+                        <input type="date" id="filter-date-input" class="flex-grow p-2 border rounded text-sm focus:ring-2 focus:ring-sky-500 neon-ring">
+                        <button onclick="applyDateFilter()" class="bg-sky-500 text-slate-900 px-4 py-2 rounded hover:bg-sky-400 text-sm font-semibold shadow-lg shadow-sky-900/40">筛选</button>
                     </div>
                 </div>
 
                 <!-- Trade Entry Form -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-3 flex items-center text-gray-700"><span>📝 记录交易</span></h2>
-                    <button onclick="openBatchImportModal()" class="w-full mb-5 bg-indigo-600 text-white py-2.5 px-4 rounded-lg hover:bg-indigo-700 transition duration-200 flex items-center justify-center gap-2 font-medium shadow-sm active:transform active:scale-95">
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 border-b border-slate-700 pb-3 flex items-center panel-title"><span>📝 记录交易</span></h2>
+                    <button onclick="openBatchImportModal()" class="w-full mb-5 bg-gradient-to-r from-indigo-500 to-sky-500 text-white py-2.5 px-4 rounded-lg hover:from-indigo-400 hover:to-sky-400 transition duration-200 flex items-center justify-center gap-2 font-semibold shadow-lg shadow-indigo-900/40 active:transform active:scale-95">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                         智能文本批量导入 (极速版)
                     </button>
-                    <div class="relative flex py-3 items-center"><div class="flex-grow border-t border-gray-200"></div><span class="flex-shrink-0 mx-4 text-gray-400 text-xs uppercase font-semibold">手动录入</span><div class="flex-grow border-t border-gray-200"></div></div>
+                    <div class="relative flex py-3 items-center"><div class="flex-grow border-t border-slate-700"></div><span class="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase font-semibold">手动录入</span><div class="flex-grow border-t border-slate-700"></div></div>
                     <form id="trade-form" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">交易员</label><select id="trader" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm"><option>W</option><option>L</option><option>Z</option><option>D</option></select></div>
-                            <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">品种</label><select id="product" onchange="updateContractOptions()" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm"><option value="Brent">Brent</option><option value="Henry Hub">Henry Hub</option><option value="JKM">JKM</option><option value="TTF">TTF</option></select></div>
+                            <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">交易员</label><select id="trader" class="block w-full px-3 py-2 border rounded-md text-sm"><option>W</option><option>L</option><option>Z</option><option>D</option></select></div>
+                            <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">品种</label><select id="product" onchange="updateContractOptions()" class="block w-full px-3 py-2 border rounded-md text-sm"><option value="Brent">Brent</option><option value="Henry Hub">Henry Hub</option><option value="JKM">JKM</option><option value="TTF">TTF</option></select></div>
                         </div>
-                        <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">合约</label><select id="contract" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm"></select></div>
-                        <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">交易类型</label><select id="trade-type" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm"><option value="regular">常规交易 (计入盈亏)</option><option value="adjustment">成本调整 (优化成本)</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">合约</label><select id="contract" class="block w-full px-3 py-2 border rounded-md text-sm"></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">交易类型</label><select id="trade-type" class="block w-full px-3 py-2 border rounded-md text-sm"><option value="regular">常规交易 (计入盈亏)</option><option value="adjustment">成本调整 (优化成本)</option></select></div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">数量 (负=卖)</label><input type="number" id="quantity" step="0.001" placeholder="-10" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm" required></div>
-                            <div><label class="block text-xs font-semibold text-gray-500 uppercase mb-1">价格</label><input type="number" step="any" id="price" placeholder="60.00" class="block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm" required></div>
+                            <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">数量 (负=卖)</label><input type="number" id="quantity" step="0.001" placeholder="-10" class="block w-full px-3 py-2 border rounded-md text-sm" required></div>
+                            <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">价格</label><input type="number" step="any" id="price" placeholder="60.00" class="block w-full px-3 py-2 border rounded-md text-sm" required></div>
                         </div>
-                        <button type="submit" id="submit-btn" class="w-full bg-slate-800 text-white py-2 px-4 rounded-md hover:bg-slate-900 transition duration-200 font-medium">提交交易</button>
+                        <button type="submit" id="submit-btn" class="w-full bg-slate-100 text-slate-900 py-2 px-4 rounded-md hover:bg-white transition duration-200 font-semibold shadow-lg shadow-slate-900/40">提交交易</button>
                     </form>
                 </div>
                 
                 <!-- Settings -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-3 text-gray-700">⚙️ 参数设置</h2>
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 border-b border-slate-700 pb-3 panel-title">⚙️ 参数设置</h2>
                     <div class="space-y-3">
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">Brent 费用</label><input type="number" step="0.01" id="commission-brent" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">Gas(HH/JKM)</label><input type="number" step="0.0001" id="commission-hh" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-purple-700 font-medium">TTF 换算</label><input type="number" step="0.01" id="ttf-multiplier" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-purple-50 border border-purple-200 rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">USD/CNY 汇率</label><input type="number" step="0.01" id="exchange-rate-rmb" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-gray-600">期初盈亏</label><input type="number" step="any" id="initial-realized-pl" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-gray-50 border rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">Brent 费用</label><input type="number" step="0.01" id="commission-brent" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">Gas(HH/JKM)</label><input type="number" step="0.0001" id="commission-hh" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-sky-300 font-medium">TTF 换算</label><input type="number" step="0.01" id="ttf-multiplier" onchange="updateSettings()" class="text-right w-full px-2 py-1 border border-sky-400/40 rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">USD/CNY 汇率</label><input type="number" step="0.01" id="exchange-rate-rmb" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">期初盈亏</label><input type="number" step="any" id="initial-realized-pl" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
                         <div class="border-t pt-2 mt-2"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-yellow-700 font-medium">对账基准金</label><input type="number" step="any" id="rec-base-val" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-yellow-50 border border-yellow-200 rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-yellow-700 font-medium">对账调节项</label><input type="number" step="any" id="rec-other-val" onchange="updateSettings()" class="text-right w-full px-2 py-1 bg-yellow-50 border border-yellow-200 rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-amber-300 font-medium">对账基准金</label><input type="number" step="any" id="rec-base-val" onchange="updateSettings()" class="text-right w-full px-2 py-1 border border-amber-300/40 rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-amber-300 font-medium">对账调节项</label><input type="number" step="any" id="rec-other-val" onchange="updateSettings()" class="text-right w-full px-2 py-1 border border-amber-300/40 rounded text-sm"></div>
                     </div>
                 </div>
 
                 <!-- AI Interaction -->
-                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-xl shadow-sm border border-indigo-100">
-                    <h2 class="text-lg font-bold mb-2 text-indigo-900 flex items-center gap-2">🤖 AI 协作 (NotebookLM)</h2>
-                    <button onclick="exportNotebookLMData()" class="w-full bg-white text-indigo-600 border border-indigo-200 py-2 px-4 rounded-md hover:bg-indigo-50 transition font-medium flex items-center justify-center gap-2 text-sm">生成语料文件 (.txt)</button>
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-2 text-sky-200 flex items-center gap-2 panel-title">🤖 AI 协作 (NotebookLM)</h2>
+                    <button onclick="exportNotebookLMData()" class="w-full bg-slate-900/60 text-sky-200 border border-sky-500/30 py-2 px-4 rounded-md hover:bg-slate-900 transition font-semibold flex items-center justify-center gap-2 text-sm">生成语料文件 (.txt)</button>
                 </div>
 
                 <!-- Data Management -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-3 text-gray-700">💾 数据与报表</h2>
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 border-b border-slate-700 pb-3 panel-title">💾 数据与报表</h2>
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="exportData()" class="bg-gray-100 text-gray-700 py-2 px-3 rounded hover:bg-gray-200 text-xs">备份数据</button>
-                        <label for="import-file" class="cursor-pointer bg-gray-100 text-gray-700 py-2 px-3 rounded hover:bg-gray-200 text-xs text-center block">恢复数据<input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)"></label>
-                        <label for="import-mtm-file" class="col-span-2 cursor-pointer bg-teal-50 text-teal-700 border border-teal-200 py-2 px-3 rounded hover:bg-teal-100 text-xs text-center flex items-center justify-center gap-1">📈 更新行情 (JSON)<input type="file" id="import-mtm-file" class="hidden" accept=".json" onchange="importMtmData(event)"></label>
+                        <button onclick="exportData()" class="bg-slate-800 text-slate-200 py-2 px-3 rounded hover:bg-slate-700 text-xs">备份数据</button>
+                        <label for="import-file" class="cursor-pointer bg-slate-800 text-slate-200 py-2 px-3 rounded hover:bg-slate-700 text-xs text-center block">恢复数据<input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)"></label>
+                        <label for="import-mtm-file" class="col-span-2 cursor-pointer bg-emerald-900/40 text-emerald-200 border border-emerald-400/30 py-2 px-3 rounded hover:bg-emerald-900/60 text-xs text-center flex items-center justify-center gap-1">📈 更新行情 (JSON)<input type="file" id="import-mtm-file" class="hidden" accept=".json" onchange="importMtmData(event)"></label>
                     </div>
                     <div class="mt-4 space-y-2">
-                        <button onclick="exportLedgerCSV()" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm font-medium">导出逐日台账 (CSV)</button>
-                        <button onclick="openReconcileModal()" class="w-full bg-amber-500 text-white py-2 px-4 rounded hover:bg-amber-600 text-sm font-medium flex items-center justify-center gap-2">⚖️ 资金对账助手</button>
-                        <button onclick="openDashboardModal()" class="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 text-sm font-medium shadow-md flex items-center justify-center gap-2">
+                        <button onclick="exportLedgerCSV()" class="w-full bg-sky-500 text-slate-900 py-2 px-4 rounded hover:bg-sky-400 text-sm font-semibold">导出逐日台账 (CSV)</button>
+                        <button onclick="openReconcileModal()" class="w-full bg-amber-400 text-slate-900 py-2 px-4 rounded hover:bg-amber-300 text-sm font-semibold flex items-center justify-center gap-2">⚖️ 资金对账助手</button>
+                        <button onclick="openDashboardModal()" class="w-full bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-400 text-sm font-semibold shadow-lg shadow-indigo-900/40 flex items-center justify-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                             生成综合看板
                         </button>
@@ -139,14 +157,14 @@
             <!-- Right Column: Data (8 cols) -->
             <div class="lg:col-span-8 space-y-6">
                 <!-- Stress Test -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h2 class="text-lg font-bold mb-4 text-gray-700">⚡ 压力测试</h2>
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 panel-title">⚡ 压力测试</h2>
                     <div class="flex gap-4 items-end">
-                        <div class="flex-1"><label class="block text-xs text-gray-500 mb-1">Brent 变动 ($)</label><input type="number" step="any" id="brent-scenario" placeholder="+5.0" class="w-full p-2 border rounded"></div>
-                        <div class="flex-1"><label class="block text-xs text-gray-500 mb-1">Gas 变动 ($)</label><input type="number" step="any" id="hh-scenario" placeholder="-0.5" class="w-full p-2 border rounded"></div>
-                        <button onclick="runStressTest()" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-700 h-10">计算</button>
+                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Brent 变动 ($)</label><input type="number" step="any" id="brent-scenario" placeholder="+5.0" class="w-full p-2 border rounded"></div>
+                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Gas 变动 ($)</label><input type="number" step="any" id="hh-scenario" placeholder="-0.5" class="w-full p-2 border rounded"></div>
+                        <button onclick="runStressTest()" class="bg-slate-100 text-slate-900 px-6 py-2 rounded hover:bg-white h-10 font-semibold shadow-lg shadow-slate-900/40">计算</button>
                     </div>
-                    <div id="stress-test-result" class="mt-4 p-3 bg-gray-50 rounded hidden text-center text-sm">
+                    <div id="stress-test-result" class="mt-4 p-3 bg-slate-900/70 rounded hidden text-center text-sm border border-slate-700">
                         <span class="font-medium">预计 P/L 变动: <span id="pl-change" class="font-bold"></span></span>
                         <span class="mx-4 text-gray-300">|</span>
                         <span class="font-medium">新浮动 P/L: <span id="new-total-pl" class="font-bold"></span></span>
@@ -154,27 +172,27 @@
                 </div>
 
                 <!-- Current Positions -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="panel p-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <h2 class="text-xl font-bold flex items-center gap-2 panel-title">
                             🚀 当前持仓
-                            <span class="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full" id="pos-count-badge">0</span>
+                            <span class="text-xs font-normal text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full" id="pos-count-badge">0</span>
                         </h2>
                         <div class="flex gap-2">
                             <input type="text" id="search-positions" onkeyup="filterTable('search-positions', 'positions-table')" placeholder="搜索..." class="px-3 py-1 border rounded text-sm w-40">
-                            <button onclick="exportPositionsCSV()" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-medium transition">导出 CSV</button>
+                            <button onclick="exportPositionsCSV()" class="text-sky-300 hover:bg-slate-800/60 px-3 py-1 rounded text-sm font-medium transition">导出 CSV</button>
                         </div>
                     </div>
                     
-                    <div class="overflow-x-auto rounded-lg border border-gray-200">
-                        <table class="w-full text-sm text-left text-gray-600">
-                            <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+                    <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                        <table class="w-full text-sm text-left text-slate-200">
+                            <thead class="text-xs uppercase border-b border-slate-700">
                                 <tr>
                                     <th class="px-4 py-3">品种</th><th class="px-4 py-3">合约</th><th class="px-4 py-3 text-right">数量</th><th class="px-4 py-3 text-center">方向</th><th class="px-4 py-3 text-right">持仓均价</th><th class="px-4 py-3 text-right">MTM</th><th class="px-4 py-3 text-right">浮动 P/L</th><th class="px-4 py-3 text-right">到岸价</th><th class="px-4 py-3 text-center">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="positions-table" class="divide-y divide-gray-100"></tbody>
-                            <tfoot class="bg-gray-50 font-semibold text-gray-900">
+                            <tfoot class="bg-slate-900/70 font-semibold text-slate-100">
                                 <tr><td colspan="6" class="text-right px-4 py-3">总计浮动盈亏</td><td id="total-floating-pl" class="px-4 py-3 text-right">0.00</td><td colspan="2"></td></tr>
                                 <tr><td colspan="6" class="text-right px-4 py-3">总净持仓量</td><td id="total-net-qty" class="px-4 py-3 text-right">0.000</td><td colspan="2"></td></tr>
                             </tfoot>
@@ -184,24 +202,24 @@
                 
                 <!-- Logs & History -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-700">📜 交易日志 (最近500条)</h3><button onclick="exportLogCSV()" class="text-xs text-blue-600 hover:underline">导出</button></div>
+                    <div class="panel p-6">
+                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold panel-title">📜 交易日志 (最近500条)</h3><button onclick="exportLogCSV()" class="text-xs text-sky-300 hover:underline">导出</button></div>
                         <input type="text" id="search-log" onkeyup="filterTable('search-log', 'log-table')" placeholder="搜索..." class="w-full px-3 py-1 border rounded text-xs mb-2">
-                        <div class="overflow-y-auto max-h-64"><table class="w-full text-xs text-left text-gray-500"><thead class="sticky top-0 bg-gray-50"><tr><th class="px-2 py-2">时间</th><th>合约</th><th>数量</th><th>价格</th><th>操作</th></tr></thead><tbody id="log-table"></tbody></table></div>
+                        <div class="overflow-y-auto max-h-64"><table class="w-full text-xs text-left text-slate-300"><thead class="sticky top-0 bg-slate-900/80"><tr><th class="px-2 py-2">时间</th><th>合约</th><th>数量</th><th>价格</th><th>操作</th></tr></thead><tbody id="log-table"></tbody></table></div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-700">🏁 历史平仓 (最近500条)</h3><button onclick="exportHistoryCSV()" class="text-xs text-blue-600 hover:underline">导出</button></div>
+                    <div class="panel p-6">
+                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold panel-title">🏁 历史平仓 (最近500条)</h3><button onclick="exportHistoryCSV()" class="text-xs text-sky-300 hover:underline">导出</button></div>
                         <input type="text" id="search-history" onkeyup="filterTable('search-history', 'history-table')" placeholder="搜索..." class="w-full px-3 py-1 border rounded text-xs mb-2">
-                        <div class="overflow-y-auto max-h-64"><table class="w-full text-xs text-left text-gray-500"><thead class="sticky top-0 bg-gray-50"><tr><th class="px-2 py-2">日期</th><th>合约</th><th>平仓量</th><th>盈亏</th></tr></thead><tbody id="history-table"></tbody><tfoot class="sticky bottom-0 bg-gray-50 font-bold"><tr><td colspan="3" class="text-right px-2">累计</td><td id="total-realized-pl">0.00</td></tr></tfoot></table></div>
+                        <div class="overflow-y-auto max-h-64"><table class="w-full text-xs text-left text-slate-300"><thead class="sticky top-0 bg-slate-900/80"><tr><th class="px-2 py-2">日期</th><th>合约</th><th>平仓量</th><th>盈亏</th></tr></thead><tbody id="history-table"></tbody><tfoot class="sticky bottom-0 bg-slate-900/80 font-bold"><tr><td colspan="3" class="text-right px-2">累计</td><td id="total-realized-pl">0.00</td></tr></tfoot></table></div>
                     </div>
                 </div>
 
                 <!-- Charts -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h2 class="text-lg font-bold mb-4 border-b pb-2 text-gray-700">📊 数据可视化</h2>
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 border-b border-slate-700 pb-2 panel-title">📊 数据可视化</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div><h3 class="text-sm font-medium text-center mb-2">持仓市值结构</h3><div class="chart-container"><canvas id="position-structure-chart"></canvas></div></div>
-                        <div><h3 class="text-sm font-medium text-center mb-2">累计盈亏曲线</h3><div class="chart-container"><canvas id="realized-pl-chart"></canvas></div></div>
+                        <div><h3 class="text-sm font-medium text-center mb-2 text-slate-300">持仓市值结构</h3><div class="chart-container"><canvas id="position-structure-chart"></canvas></div></div>
+                        <div><h3 class="text-sm font-medium text-center mb-2 text-slate-300">累计盈亏曲线</h3><div class="chart-container"><canvas id="realized-pl-chart"></canvas></div></div>
                     </div>
                 </div>
             </div>
@@ -209,52 +227,52 @@
     </div>
 
     <!-- Modals -->
-    <div id="edit-modal" class="modal-backdrop hidden"><div class="modal-content"><h2 class="text-xl font-bold mb-4">编辑持仓</h2><form id="edit-form" class="space-y-4"><input type="hidden" id="edit-index"><label class="block text-sm">数量<input type="number" id="edit-quantity" class="w-full border p-2 rounded" required></label><label class="block text-sm">均价<input type="number" step="any" id="edit-price" class="w-full border p-2 rounded" required></label><div class="flex justify-end gap-2"><button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-200 rounded">取消</button><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">保存</button></div></form></div></div>
-    <div id="action-confirm-modal" class="modal-backdrop hidden"><div class="modal-content text-center"><h2 id="confirm-title" class="text-xl font-bold mb-4"></h2><p id="confirm-body" class="mb-6 text-gray-600"></p><div class="flex justify-center gap-4"><button id="confirm-cancel-btn" type="button" onclick="closeActionConfirmModal()" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-400">取消</button><button id="confirm-action-btn" type="button" class="bg-red-600 text-white py-2 px-6 rounded-md hover:bg-red-700">确认</button></div></div></div>
+    <div id="edit-modal" class="modal-backdrop hidden"><div class="modal-content"><h2 class="text-xl font-bold mb-4">编辑持仓</h2><form id="edit-form" class="space-y-4"><input type="hidden" id="edit-index"><label class="block text-sm">数量<input type="number" id="edit-quantity" class="w-full border p-2 rounded" required></label><label class="block text-sm">均价<input type="number" step="any" id="edit-price" class="w-full border p-2 rounded" required></label><div class="flex justify-end gap-2"><button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-700 text-slate-100 rounded hover:bg-slate-600">取消</button><button type="submit" class="px-4 py-2 bg-sky-500 text-slate-900 rounded hover:bg-sky-400 font-semibold">保存</button></div></form></div></div>
+    <div id="action-confirm-modal" class="modal-backdrop hidden"><div class="modal-content text-center"><h2 id="confirm-title" class="text-xl font-bold mb-4"></h2><p id="confirm-body" class="mb-6 text-slate-300"></p><div class="flex justify-center gap-4"><button id="confirm-cancel-btn" type="button" onclick="closeActionConfirmModal()" class="bg-slate-700 text-slate-100 py-2 px-6 rounded-md hover:bg-slate-600">取消</button><button id="confirm-action-btn" type="button" class="bg-red-600 text-white py-2 px-6 rounded-md hover:bg-red-500">确认</button></div></div></div>
     
     <div id="reconcile-modal" class="modal-backdrop hidden">
         <div class="modal-content max-w-2xl w-full">
-            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2"><span class="text-yellow-600">⚖️</span> 资金对账助手</h2>
-            <p class="text-sm text-gray-600 mb-6 bg-yellow-50 p-3 rounded border border-yellow-200">核对公式：<b>水单总盈亏</b> ≈ <b>(App累计实现P/L + App浮动净P/L)</b> - <b>调节项</b></p>
+            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2"><span class="text-amber-300">⚖️</span> 资金对账助手</h2>
+            <p class="text-sm text-slate-300 mb-6 bg-amber-900/30 p-3 rounded border border-amber-400/40">核对公式：<b>水单总盈亏</b> ≈ <b>(App累计实现P/L + App浮动净P/L)</b> - <b>调节项</b></p>
             <div class="space-y-4">
-                <div class="reconcile-row"><label class="font-medium w-1/3">App 累计实现盈亏:</label><span id="rec-app-realized" class="font-mono text-gray-800"></span></div>
-                <div class="reconcile-row"><label class="font-medium w-1/3">App 浮动净盈亏:</label><span id="rec-app-floating" class="font-mono text-gray-800"></span></div>
-                <hr class="border-gray-200">
-                <div class="reconcile-row"><label class="font-medium w-1/3">➖ 对账基准金:</label><input type="number" id="modal-rec-base" class="reconcile-input bg-gray-100 cursor-not-allowed" readonly></div>
-                <div class="reconcile-row"><label class="font-medium w-1/3">➖ 对账调节项:</label><input type="number" id="modal-rec-other" class="reconcile-input bg-gray-100 cursor-not-allowed" readonly></div>
+                <div class="reconcile-row"><label class="font-medium w-1/3">App 累计实现盈亏:</label><span id="rec-app-realized" class="font-mono text-slate-100"></span></div>
+                <div class="reconcile-row"><label class="font-medium w-1/3">App 浮动净盈亏:</label><span id="rec-app-floating" class="font-mono text-slate-100"></span></div>
+                <hr class="border-slate-700">
+                <div class="reconcile-row"><label class="font-medium w-1/3">➖ 对账基准金:</label><input type="number" id="modal-rec-base" class="reconcile-input bg-slate-800/70 cursor-not-allowed" readonly></div>
+                <div class="reconcile-row"><label class="font-medium w-1/3">➖ 对账调节项:</label><input type="number" id="modal-rec-other" class="reconcile-input bg-slate-800/70 cursor-not-allowed" readonly></div>
                 
-                <div class="mt-4"><button type="button" onclick="toggleRecDetails()" class="text-xs text-blue-600 hover:underline flex items-center gap-1"><span id="rec-detail-icon">▶</span> 查看持仓明细 (用于排查)</button><div id="rec-detail-table" class="hidden mt-2 border rounded overflow-hidden"><table class="w-full text-xs text-left bg-gray-50"><thead class="bg-gray-100"><tr><th class="p-2">合约</th><th class="p-2 text-right">数量</th><th class="p-2 text-right">MTM</th><th class="p-2 text-right">浮动P/L</th></tr></thead><tbody id="rec-detail-body"></tbody></table></div></div>
+                <div class="mt-4"><button type="button" onclick="toggleRecDetails()" class="text-xs text-sky-300 hover:underline flex items-center gap-1"><span id="rec-detail-icon">▶</span> 查看持仓明细 (用于排查)</button><div id="rec-detail-table" class="hidden mt-2 border border-slate-700 rounded overflow-hidden"><table class="w-full text-xs text-left bg-slate-900/70"><thead class="bg-slate-800/70"><tr><th class="p-2">合约</th><th class="p-2 text-right">数量</th><th class="p-2 text-right">MTM</th><th class="p-2 text-right">浮动P/L</th></tr></thead><tbody id="rec-detail-body"></tbody></table></div></div>
 
-                <div class="reconcile-row bg-gray-100 p-2 rounded mt-4"><label class="font-bold w-1/3 text-gray-700">App 计算净值:</label><span id="rec-app-net" class="font-bold font-mono text-lg"></span></div>
-                <hr class="border-gray-300 border-dashed my-4">
-                <div class="reconcile-row"><label class="font-bold w-1/3 text-blue-800">📝 水单 Total P/L (输入):</label><input type="number" id="rec-statement-val" class="reconcile-input border-blue-300 focus:ring-blue-500" placeholder="输入水单X列总和" onkeyup="calcReconcile()"></div>
-                <div class="mt-6 p-4 rounded-lg text-center" id="rec-result-box"><div class="text-sm text-gray-500 mb-1">差异金额 (水单 - App)</div><div id="rec-diff-val" class="text-3xl font-bold font-mono">0.00</div><div id="rec-status-text" class="text-sm font-semibold mt-2"></div></div>
+                <div class="reconcile-row bg-slate-800/70 p-2 rounded mt-4"><label class="font-bold w-1/3 text-slate-200">App 计算净值:</label><span id="rec-app-net" class="font-bold font-mono text-lg"></span></div>
+                <hr class="border-slate-700 border-dashed my-4">
+                <div class="reconcile-row"><label class="font-bold w-1/3 text-sky-300">📝 水单 Total P/L (输入):</label><input type="number" id="rec-statement-val" class="reconcile-input border-sky-400/50 focus:ring-sky-500" placeholder="输入水单X列总和" onkeyup="calcReconcile()"></div>
+                <div class="mt-6 p-4 rounded-lg text-center bg-slate-900/70 border border-slate-700" id="rec-result-box"><div class="text-sm text-slate-400 mb-1">差异金额 (水单 - App)</div><div id="rec-diff-val" class="text-3xl font-bold font-mono">0.00</div><div id="rec-status-text" class="text-sm font-semibold mt-2"></div></div>
             </div>
-            <div class="flex justify-end space-x-3 mt-6"><button onclick="closeReconcileModal()" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-400">关闭</button></div>
+            <div class="flex justify-end space-x-3 mt-6"><button onclick="closeReconcileModal()" class="bg-slate-700 text-slate-100 py-2 px-6 rounded-md hover:bg-slate-600">关闭</button></div>
         </div>
     </div>
     
     <!-- NEW v7.1: Dashboard Modal -->
     <div id="dashboard-modal" class="modal-backdrop hidden">
-        <div class="modal-content w-full max-w-4xl bg-gray-50">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div class="modal-content w-full max-w-4xl">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">📊 综合复盘看板</h2>
-                    <p class="text-sm text-gray-500 mt-1" id="dash-date-display"></p>
+                    <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">📊 综合复盘看板</h2>
+                    <p class="text-sm text-slate-400 mt-1" id="dash-date-display"></p>
                 </div>
-                <button onclick="closeDashboardModal()" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                <button onclick="closeDashboardModal()" class="text-slate-400 hover:text-slate-200"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="dash-card bg-white shadow-sm border-l-4 border-green-500">
+                <div class="dash-card border-l-4 border-emerald-400/70">
                     <div class="dash-label">当日实现盈亏 (Realized)</div>
                     <div class="dash-val text-green-600" id="dash-realized"></div>
                 </div>
-                <div class="dash-card bg-white shadow-sm border-l-4 border-blue-500">
+                <div class="dash-card border-l-4 border-sky-400/70">
                     <div class="dash-label">当前总浮动盈亏 (Floating)</div>
                     <div class="dash-val text-blue-600" id="dash-floating"></div>
                 </div>
-                <div class="dash-card bg-white shadow-sm border-l-4 border-purple-500">
+                <div class="dash-card border-l-4 border-purple-400/70">
                     <div class="dash-label">当日交易笔数</div>
                     <div class="dash-val text-purple-600" id="dash-tx-count"></div>
                 </div>
@@ -262,30 +280,30 @@
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Today's Closed Trades -->
-                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">📉 当日平仓明细</h3>
+                <div class="bg-slate-900/70 p-4 rounded-lg shadow-sm border border-slate-700">
+                    <h3 class="text-sm font-bold text-slate-200 mb-3 border-b border-slate-700 pb-2">📉 当日平仓明细</h3>
                     <div class="overflow-y-auto max-h-60">
                         <table class="w-full text-xs text-left">
-                            <thead class="bg-gray-50 sticky top-0 text-gray-500"><tr><th class="p-2">合约</th><th class="p-2">方向</th><th class="p-2 text-right">平仓量</th><th class="p-2 text-right">P/L</th></tr></thead>
+                            <thead class="bg-slate-800/80 sticky top-0 text-slate-400"><tr><th class="p-2">合约</th><th class="p-2">方向</th><th class="p-2 text-right">平仓量</th><th class="p-2 text-right">P/L</th></tr></thead>
                             <tbody id="dash-closed-body"></tbody>
                         </table>
                     </div>
                 </div>
                 
                 <!-- Current Positions Summary -->
-                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">📦 当前持仓汇总</h3>
+                <div class="bg-slate-900/70 p-4 rounded-lg shadow-sm border border-slate-700">
+                    <h3 class="text-sm font-bold text-slate-200 mb-3 border-b border-slate-700 pb-2">📦 当前持仓汇总</h3>
                     <div class="overflow-y-auto max-h-60">
                         <table class="w-full text-xs text-left">
-                            <thead class="bg-gray-50 sticky top-0 text-gray-500"><tr><th class="p-2">品种</th><th class="p-2 text-right">净持仓</th><th class="p-2 text-right">加权均价</th><th class="p-2 text-right">浮动P/L</th></tr></thead>
+                            <thead class="bg-slate-800/80 sticky top-0 text-slate-400"><tr><th class="p-2">品种</th><th class="p-2 text-right">净持仓</th><th class="p-2 text-right">加权均价</th><th class="p-2 text-right">浮动P/L</th></tr></thead>
                             <tbody id="dash-pos-body"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
             
-            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t">
-                <button onclick="exportDashboardReport()" class="bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 flex items-center gap-2 text-sm font-bold shadow-sm">
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-slate-700">
+                <button onclick="exportDashboardReport()" class="bg-indigo-500 text-white py-2 px-6 rounded-md hover:bg-indigo-400 flex items-center gap-2 text-sm font-bold shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     导出看板报告 (.txt)
                 </button>
@@ -296,12 +314,12 @@
     <div id="batch-import-modal" class="modal-backdrop hidden">
         <div class="modal-content max-w-4xl w-full">
             <h2 class="text-xl font-bold mb-2">智能文本批量导入 (极速版)</h2>
-            <p class="text-xs text-gray-500 mb-4">支持: 1) Sold 200x Brent May26 | 50x pm Jul26-Dec26 | Bought TTF 26Q4 | D sold ...</p>
-            <textarea id="batch-input" rows="12" class="w-full p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500" placeholder="在此粘贴交易文本..."></textarea>
-            <div class="flex justify-end space-x-3 my-4"><button onclick="parseImportText()" class="bg-indigo-600 text-white py-2 px-6 rounded hover:bg-indigo-700">解析预览</button></div>
+            <p class="text-xs text-slate-400 mb-4">支持: 1) Sold 200x Brent May26 | 50x pm Jul26-Dec26 | Bought TTF 26Q4 | D sold ...</p>
+            <textarea id="batch-input" rows="12" class="w-full p-3 border border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500" placeholder="在此粘贴交易文本..."></textarea>
+            <div class="flex justify-end space-x-3 my-4"><button onclick="parseImportText()" class="bg-indigo-500 text-white py-2 px-6 rounded hover:bg-indigo-400">解析预览</button></div>
             <div id="import-preview-container" class="hidden">
-                <div class="overflow-x-auto border border-gray-200 rounded-md max-h-64"><table class="w-full text-xs text-left"><thead class="bg-gray-50 sticky top-0"><tr><th class="px-4 py-2">状态</th><th>交易员</th><th>品种</th><th>合约</th><th>方向</th><th>数量</th><th>价格</th></tr></thead><tbody id="import-preview-body"></tbody></table></div>
-                <div class="mt-4 flex justify-between items-center"><span id="import-summary" class="text-sm font-bold text-gray-700"></span><div class="space-x-3"><button onclick="closeBatchImportModal()" class="bg-gray-300 px-4 py-2 rounded">取消</button><button onclick="batchSubmitTrades()" id="btn-batch-submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">确认提交</button></div></div>
+                <div class="overflow-x-auto border border-slate-700 rounded-md max-h-64"><table class="w-full text-xs text-left"><thead class="bg-slate-800/80 sticky top-0"><tr><th class="px-4 py-2">状态</th><th>交易员</th><th>品种</th><th>合约</th><th>方向</th><th>数量</th><th>价格</th></tr></thead><tbody id="import-preview-body"></tbody></table></div>
+                <div class="mt-4 flex justify-between items-center"><span id="import-summary" class="text-sm font-bold text-slate-200"></span><div class="space-x-3"><button onclick="closeBatchImportModal()" class="bg-slate-700 px-4 py-2 rounded text-slate-100 hover:bg-slate-600">取消</button><button onclick="batchSubmitTrades()" id="btn-batch-submit" class="bg-emerald-500 text-slate-900 px-4 py-2 rounded hover:bg-emerald-400 font-semibold">确认提交</button></div></div>
             </div>
         </div>
     </div>
@@ -754,7 +772,7 @@ function openDashboardModal() {
             <tr class="border-b">
                 <td class="p-2 font-bold">${prod}</td>
                 <td class="p-2 text-right font-mono">${subQty.toFixed(3)}</td>
-                <td class="p-2 text-right text-gray-500">${wAvg.toFixed(3)}</td>
+                <td class="p-2 text-right text-slate-400">${wAvg.toFixed(3)}</td>
                 <td class="p-2 text-right font-bold ${plClass}">${subFloating.toFixed(0)}</td>
             </tr>
         `;
@@ -843,12 +861,12 @@ function renderPositions() {
         const plColor = subPL >= 0 ? 'text-green-600' : 'text-red-600';
 
         tbody.innerHTML += `
-            <tr class="subtotal-row border-b border-t border-gray-200">
+            <tr class="subtotal-row border-b border-t border-slate-700/60">
                 <td class="px-4 py-2"><span class="badge ${badgeClass}">${prod}</span></td>
                 <td class="px-4 py-2 text-xs uppercase">SUBTOTAL</td>
                 <td class="px-4 py-2 text-right font-mono font-bold">${subQty.toFixed(3)}</td>
                 <td class="px-4 py-2"></td>
-                <td class="px-4 py-2 text-right text-xs text-gray-500">W.Avg: ${subWAvg.toFixed(4)}</td>
+                <td class="px-4 py-2 text-right text-xs text-slate-400">W.Avg: ${subWAvg.toFixed(4)}</td>
                 <td class="px-4 py-2"></td>
                 <td class="px-4 py-2 text-right font-bold ${plColor}">${subPL.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td colspan="2"></td>
@@ -871,15 +889,15 @@ function renderPositions() {
             const plClass = net >= 0 ? 'text-green-600' : 'text-red-600';
             
             tbody.innerHTML += `
-                <tr class="border-b table-row-hover transition-colors bg-white">
-                    <td class="px-4 py-3 font-medium pl-8 border-l-4 border-transparent hover:border-indigo-200">${p.trader}</td>
-                    <td class="px-4 py-3 font-mono">${p.contract} <span class="text-xs text-gray-300 ml-1">${unit}</span></td>
+                <tr class="border-b table-row-hover transition-colors bg-slate-900/30">
+                    <td class="px-4 py-3 font-medium pl-8 border-l-4 border-transparent hover:border-indigo-300">${p.trader}</td>
+                    <td class="px-4 py-3 font-mono">${p.contract} <span class="text-xs text-slate-400 ml-1">${unit}</span></td>
                     <td class="px-4 py-3 text-right font-mono">${Math.abs(p.quantity).toFixed(3)}</td>
                     <td class="px-4 py-3 text-center">${dirBadge}</td>
-                    <td class="px-4 py-3 text-right text-gray-500">${avg.toFixed(3)}</td>
+                    <td class="px-4 py-3 text-right text-slate-400">${avg.toFixed(3)}</td>
                     <td class="px-4 py-3 text-right"><input type="number" step="0.01" value="${mtm.toFixed(3)}" class="w-20 text-right text-xs border rounded px-1" onchange="updateMtmPrice('${uniqueId}', this.value)"></td>
                     <td class="px-4 py-3 text-right font-bold ${plClass}">${net.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td class="px-4 py-3 text-right text-xs text-gray-400">${landed ? landed.toFixed(4) : '-'}</td>
+                    <td class="px-4 py-3 text-right text-xs text-slate-400">${landed ? landed.toFixed(4) : '-'}</td>
                     <td class="px-4 py-3 text-center"><button onclick="reverseTradeByPos('${uniqueId}')" class="text-xs text-red-500 hover:underline">撤销</button></td>
                 </tr>`;
         });
@@ -900,7 +918,7 @@ function renderLogs() {
     }
     
     const visibleLogs = logs.sort((a,b) => b.date.localeCompare(a.date)).slice(0, 500);
-    const html = visibleLogs.map(l => `<tr class="border-b hover:bg-gray-50"><td class="px-2 py-2">${l.date.substring(5,16).replace('T',' ')}</td><td class="font-bold text-xs">${l.trader}</td><td>${l.contract}</td><td class="${l.quantity>0?'text-green-600':'text-red-600'}">${l.quantity}</td><td>${l.price}</td><td><button onclick="reverseTrade(${l.id})" class="text-gray-400 hover:text-red-500">×</button></td></tr>`).join('');
+    const html = visibleLogs.map(l => `<tr class="border-b hover:bg-slate-800/60"><td class="px-2 py-2">${l.date.substring(5,16).replace('T',' ')}</td><td class="font-bold text-xs">${l.trader}</td><td>${l.contract}</td><td class="${l.quantity>0?'text-green-600':'text-red-600'}">${l.quantity}</td><td>${l.price}</td><td><button onclick="reverseTrade(${l.id})" class="text-slate-400 hover:text-red-400">×</button></td></tr>`).join('');
     tbody.innerHTML = html;
 }
 
@@ -917,7 +935,7 @@ function renderHistory() {
     history.forEach(h => total += h.realizedPL);
     
     const recent = history.slice(0, 500);
-    const html = recent.map(h => `<tr class="border-b hover:bg-gray-50"><td class="px-2 py-2">${h.date.split('T')[0].substring(5)}</td><td>${h.contract}</td><td>${h.closedQuantity.toFixed(1)}</td><td class="font-bold ${h.realizedPL>=0?'text-green-600':'text-red-600'}">${h.realizedPL.toFixed(0)}</td></tr>`).join('');
+    const html = recent.map(h => `<tr class="border-b hover:bg-slate-800/60"><td class="px-2 py-2">${h.date.split('T')[0].substring(5)}</td><td>${h.contract}</td><td>${h.closedQuantity.toFixed(1)}</td><td class="font-bold ${h.realizedPL>=0?'text-green-600':'text-red-600'}">${h.realizedPL.toFixed(0)}</td></tr>`).join('');
     tbody.innerHTML = html;
     document.getElementById('total-realized-pl').textContent = total.toLocaleString('en-US', {style:'currency', currency:'USD'});
 }
