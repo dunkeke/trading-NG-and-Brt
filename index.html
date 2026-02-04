@@ -265,7 +265,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div class="dash-card border-l-4 border-emerald-400/70">
-                    <div class="dash-label">当日实现盈亏 (Realized)</div>
+                    <div class="dash-label">历史累计平仓实现 - 对账调节项</div>
                     <div class="dash-val text-green-600" id="dash-realized"></div>
                 </div>
                 <div class="dash-card border-l-4 border-sky-400/70">
@@ -308,6 +308,8 @@
                     导出看板报告 (.txt)
                 </button>
             </div>
+
+            <footer class="mt-10 text-center text-xs text-slate-500">© dundunke</footer>
         </div>
     </div>
 
@@ -702,14 +704,19 @@ function generateDailyReport() {
 
 function openDashboardModal() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('dash-date-display').textContent = `📅 ${today}`;
+    const filterNote = state.filterDate ? ` | 筛选起始：${state.filterDate}` : '';
+    document.getElementById('dash-date-display').textContent = `📅 ${today}${filterNote}`;
     
-    // 1. Calculate Realized PL for Today
+    // 1. Calculate cumulative realized since filter date, minus reconciliation adjustment
     const todayHistory = state.history.filter(h => h.date.startsWith(today));
-    const realizedToday = todayHistory.reduce((acc, h) => acc + h.realizedPL, 0);
+    const relevantHistory = state.filterDate ? state.history.filter(h => h.date >= state.filterDate) : state.history;
+    const historyRealized = relevantHistory.reduce((acc, h) => acc + h.realizedPL, 0);
+    const baseRealized = (state.filterDate ? 0 : (state.settings.initialRealizedPL || 0)) + historyRealized;
+    const recOther = (state.settings.reconciliation && state.settings.reconciliation.other) ? state.settings.reconciliation.other : 0;
+    const adjustedRealized = baseRealized - recOther;
     const dashRealized = document.getElementById('dash-realized');
-    dashRealized.textContent = `$${realizedToday.toLocaleString('en-US', {minimumFractionDigits: 0})}`;
-    dashRealized.className = `dash-val ${realizedToday >= 0 ? 'text-green-600' : 'text-red-600'}`;
+    dashRealized.textContent = `$${adjustedRealized.toLocaleString('en-US', {minimumFractionDigits: 0})}`;
+    dashRealized.className = `dash-val ${adjustedRealized >= 0 ? 'text-green-600' : 'text-red-600'}`;
     
     // 2. Closed Trades List
     const closedBody = document.getElementById('dash-closed-body');
@@ -794,7 +801,8 @@ function exportDashboardReport() {
     
     const rVal = document.getElementById('dash-realized').textContent;
     const fVal = document.getElementById('dash-floating').textContent;
-    txt += `当日实现盈亏: ${rVal}\n`;
+    const filterNote = state.filterDate ? ` (筛选起始：${state.filterDate})` : '';
+    txt += `历史累计平仓实现-对账调节项${filterNote}: ${rVal}\n`;
     txt += `当前浮动盈亏: ${fVal}\n\n`;
     
     txt += `--- 当日平仓明细 ---\n`;
