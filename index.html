@@ -581,6 +581,65 @@ function rebuildStateFromLogs() {
 }
 
 // --- PARSER ---
+function detectTraderFromText(clean) {
+    if (/\bD\b/.test(clean)) return 'D';
+    if (/\bW\b/.test(clean)) return 'W';
+    if (/\bL\b/.test(clean)) return 'L';
+    if (/\bZ\b/.test(clean)) return 'Z';
+    return document.getElementById('trader').value;
+}
+
+function detectProductFromText(clean) {
+    if (/TTF/.test(clean)) return 'TTF';
+    if (/JKM/.test(clean)) return 'JKM';
+    if (/\b(HH|HENRY HUB|HENRY)\b/.test(clean)) return 'Henry Hub';
+    if (/\bNATURAL GAS|NAT GAS|GAS\b/.test(clean)) return 'Henry Hub';
+    return 'Brent';
+}
+
+function formatContractName(product, year, month) {
+    const base = `${year}${month}`;
+    return product === 'Henry Hub' ? `HH${base}` : base;
+}
+
+function parseSingleContract(clean, product, monthMap) {
+    const explicitMatch = clean.match(/\b(HH|JKM|TTF)\s?(\d{2})(\d{2})\b/);
+    if (explicitMatch) {
+        const prefix = explicitMatch[1];
+        const year = explicitMatch[2];
+        const month = explicitMatch[3];
+        return prefix === 'HH' || product === 'Henry Hub' ? `HH${year}${month}` : `${year}${month}`;
+    }
+
+    const labeledMonthMatch = clean.match(/\b(HH|JKM|TTF)\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})\b/);
+    if (labeledMonthMatch) {
+        const year = labeledMonthMatch[3];
+        const month = monthMap[labeledMonthMatch[2]];
+        return labeledMonthMatch[1] === 'HH' || product === 'Henry Hub' ? `HH${year}${month}` : `${year}${month}`;
+    }
+
+    const quarterMatch = clean.match(/\b(\d{2})Q([1-4])\b/);
+    if (quarterMatch) {
+        return `${quarterMatch[1]}Q${quarterMatch[2]}`;
+    }
+    const quarterMatchAlt = clean.match(/\bQ([1-4])\s*(\d{2})\b/);
+    if (quarterMatchAlt) {
+        return `${quarterMatchAlt[2]}Q${quarterMatchAlt[1]}`;
+    }
+
+    const monthMatch = clean.match(/\b(\d{2})-(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/)
+        || clean.match(/\b(\d{2})\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/)
+        || clean.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*(\d{2})\b/)
+        || clean.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})\b/);
+    if (monthMatch) {
+        const monthToken = monthMatch[1].length === 2 ? monthMatch[2] : monthMatch[1];
+        const yearToken = monthMatch[1].length === 2 ? monthMatch[1] : (monthMatch[2] || '26');
+        return formatContractName(product, yearToken, monthMap[monthToken]);
+    }
+
+    return '';
+}
+
 function parseImportText() {
     const text = document.getElementById('batch-input').value;
     const rawLines = text.split('\n').filter(l => l.trim());
@@ -603,11 +662,8 @@ function parseImportText() {
                             .replace(/(\d+(\.\d+)?)\s*(SCN|SCREEN|PX)\b/ig, '') 
                             .toUpperCase();
             
-            let trader = document.getElementById('trader').value;
-            if(/\bD\b/.test(clean)) trader = 'D'; else if(/\bW\b/.test(clean)) trader = 'W'; else if(/\bL\b/.test(clean)) trader = 'L'; else if(/\bZ\b/.test(clean)) trader = 'Z';
-
-            let product = 'Brent'; 
-            if(/HH|HENRY/.test(clean)) product = 'Henry Hub'; else if(/JKM/.test(clean)) product = 'JKM'; else if(/TTF/.test(clean)) product = 'TTF';
+            const trader = detectTraderFromText(clean);
+            const product = detectProductFromText(clean);
             
             let side = 1; if(/SELL|SOLD|SHORT/.test(clean)) side = -1;
             
@@ -618,7 +674,7 @@ function parseImportText() {
             let price = 0;
             const otcMatch = clean.match(/OTC(?:\s*PX)?\s*(\d+(\.\d+)?)/) || clean.match(/(\d+(\.\d+)?)\s*OTC/);
             if(otcMatch) price = parseFloat(otcMatch[1]);
-            else { const atMatch = clean.match(/AT\s*(\d+(\.\d+)?)/); if(atMatch) price = parseFloat(atMatch[1]); }
+            else { const atMatch = clean.match(/AT\s*(\d+(\.\d+)?)/) || clean.match(/@\s*(\d+(\.\d+)?)/); if(atMatch) price = parseFloat(atMatch[1]); }
             
             const rangeRgx = /\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})?\s*(-|TO)\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})?\b/;
             const rangeMatch = clean.match(rangeRgx);
@@ -636,18 +692,12 @@ function parseImportText() {
                 
                 for(let i=0; i<count; i++) {
                     const absM = (startIdx + i) % 12 + 1; const absY = 26 + Math.floor((startIdx + i)/12);
-                    const cName = (product==='Henry Hub'?'HH':'') + absY + String(absM).padStart(2,'0');
+                    const cName = formatContractName(product, String(absY), String(absM).padStart(2,'0'));
                     parsedTradesBuffer.push({ isValid: true, trader, product, contract: cName, quantity: qty*side, price: finalPrices[i], side });
                 }
                 validCount++;
             } else if (qty > 0) {
-                const mMatch = clean.match(/\b(\d{2})-(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/) || clean.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*(\d{2})?\b/);
-                const qMatch = clean.match(/\b(26|27)Q[1-4]\b/); 
-                let cName = '';
-                if(qMatch) { cName = qMatch[0]; } else if(mMatch) {
-                    let mStr = mMatch[1].length===2 ? mMatch[2] : mMatch[1]; let yStr = mMatch[1].length===2 ? mMatch[1] : (mMatch[2]||'26');
-                    cName = (product==='Henry Hub'?'HH':'') + yStr + monthMap[mStr];
-                }
+                const cName = parseSingleContract(clean, product, monthMap);
                 if(cName && price > 0) { parsedTradesBuffer.push({ isValid: true, trader, product, contract: cName, quantity: qty*side, price, side }); validCount++; }
             }
         } catch(e) { console.error(e); }
