@@ -611,6 +611,13 @@ function parseSingleContract(clean, product, monthMap) {
         return prefix === 'HH' || product === 'Henry Hub' ? `HH${year}${month}` : `${year}${month}`;
     }
 
+    const labeledMonthMatch = clean.match(/\b(HH|JKM|TTF)\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})\b/);
+    if (labeledMonthMatch) {
+        const year = labeledMonthMatch[3];
+        const month = monthMap[labeledMonthMatch[2]];
+        return labeledMonthMatch[1] === 'HH' || product === 'Henry Hub' ? `HH${year}${month}` : `${year}${month}`;
+    }
+
     const quarterMatch = clean.match(/\b(\d{2})Q([1-4])\b/);
     if (quarterMatch) {
         return `${quarterMatch[1]}Q${quarterMatch[2]}`;
@@ -667,7 +674,7 @@ function parseImportText() {
             let price = 0;
             const otcMatch = clean.match(/OTC(?:\s*PX)?\s*(\d+(\.\d+)?)/) || clean.match(/(\d+(\.\d+)?)\s*OTC/);
             if(otcMatch) price = parseFloat(otcMatch[1]);
-            else { const atMatch = clean.match(/AT\s*(\d+(\.\d+)?)/); if(atMatch) price = parseFloat(atMatch[1]); }
+            else { const atMatch = clean.match(/AT\s*(\d+(\.\d+)?)/) || clean.match(/@\s*(\d+(\.\d+)?)/); if(atMatch) price = parseFloat(atMatch[1]); }
             
             const rangeRgx = /\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})?\s*(-|TO)\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})?\b/;
             const rangeMatch = clean.match(rangeRgx);
