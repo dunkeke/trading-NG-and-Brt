@@ -225,6 +225,23 @@
                         <div><h3 class="text-sm font-medium text-center mb-2 text-slate-300">累计盈亏曲线</h3><div class="chart-container"><canvas id="realized-pl-chart"></canvas></div></div>
                     </div>
                 </div>
+
+                <div class="panel p-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4 border-b border-slate-700 pb-2">
+                        <h2 class="text-lg font-bold panel-title">🌍 市场行情可视化（daily_data.json）</h2>
+                        <span id="inline-market-date" class="market-pill">尚未导入数据包</span>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div class="lg:col-span-2">
+                            <div class="chart-container" style="height: 260px;"><canvas id="external-market-chart"></canvas></div>
+                            <p id="inline-market-empty" class="text-xs text-slate-400 mt-2">导入日报数据包后，将在此展示关键品种价格柱状图。</p>
+                        </div>
+                        <div class="market-card">
+                            <div class="text-xs text-slate-400 mb-2">📰 要闻速览</div>
+                            <ul id="inline-market-news" class="text-xs text-slate-200 space-y-2"></ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -371,7 +388,7 @@ let state = {
     },
     filterDate: null
 };
-let positionChart = null, plChart = null, parsedTradesBuffer = [];
+let positionChart = null, plChart = null, externalMarketChart = null, parsedTradesBuffer = [];
 
 // ==================== 3. INITIALIZATION & UTILS ====================
 function hydrateState() {
@@ -486,6 +503,78 @@ function renderExternalMarketSnapshot() {
     newsEl.innerHTML = newsItems
         .map(item => `<li><p class="font-semibold text-slate-100">• ${item.title || '无标题'}</p><p class="text-slate-400">${item.summary || ''}</p></li>`)
         .join('');
+}
+
+function renderInlineMarketVisualization() {
+    const data = state.externalMarketData;
+    const dateEl = document.getElementById('inline-market-date');
+    const emptyEl = document.getElementById('inline-market-empty');
+    const newsEl = document.getElementById('inline-market-news');
+    const canvas = document.getElementById('external-market-chart');
+    if (!dateEl || !emptyEl || !newsEl || !canvas) return;
+
+    const labelMap = {
+        brent_future: 'Brent',
+        wti_future: 'WTI',
+        gasoline: 'Gasoline',
+        diesel: 'Diesel',
+        murban_crude: 'Murban',
+        dme_oman: 'DME Oman'
+    };
+
+    if (!data || !data.prices) {
+        dateEl.textContent = '尚未导入数据包';
+        emptyEl.classList.remove('hidden');
+        newsEl.innerHTML = '<li class="text-slate-400">暂无新闻内容</li>';
+        if (externalMarketChart) {
+            externalMarketChart.destroy();
+            externalMarketChart = null;
+        }
+        return;
+    }
+
+    dateEl.textContent = `数据日期：${data.date || '未知'}`;
+    const labels = [];
+    const values = [];
+    Object.entries(labelMap).forEach(([key, label]) => {
+        const num = Number(data.prices[key]);
+        if (Number.isFinite(num)) {
+            labels.push(label);
+            values.push(num);
+        }
+    });
+
+    if (externalMarketChart) externalMarketChart.destroy();
+    if (values.length > 0) {
+        externalMarketChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Price (USD)',
+                    data: values,
+                    borderRadius: 6,
+                    backgroundColor: ['#0ea5e9','#22d3ee','#34d399','#f59e0b','#a78bfa','#f472b6']
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.12)' } },
+                    y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.12)' } }
+                }
+            }
+        });
+        emptyEl.classList.add('hidden');
+    } else {
+        emptyEl.classList.remove('hidden');
+    }
+
+    const newsItems = parseOilNews(data.news_text);
+    newsEl.innerHTML = newsItems.length
+        ? newsItems.map(item => `<li><p class="font-semibold text-slate-100">• ${item.title || '无标题'}</p><p class="text-slate-400">${item.summary || ''}</p></li>`).join('')
+        : '<li class="text-slate-400">暂无新闻内容</li>';
 }
 
 // ==================== 4. MODALS ====================
@@ -1005,7 +1094,7 @@ function exportDashboardReport() {
 
 // --- RENDER & INIT (Moved to end) ---
 function renderAll() {
-    renderPositions(); renderLogs(); renderHistory(); 
+    renderPositions(); renderLogs(); renderHistory(); renderInlineMarketVisualization(); 
     document.getElementById('pos-count-badge').textContent = state.positions.length;
 }
 
@@ -1179,6 +1268,7 @@ function importDailyDataPackage(event) {
             };
             saveState();
             renderExternalMarketSnapshot();
+            renderInlineMarketVisualization();
             openInfoModal('成功', `日报导入完成：${importedData.date}`);
         } catch (error) {
             openInfoModal('失败', error.message);
