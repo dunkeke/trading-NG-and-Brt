@@ -176,21 +176,6 @@
                     </div>
                 </div>
 
-                <!-- Stress Test -->
-                <div class="panel p-6">
-                    <h2 class="text-lg font-bold mb-4 panel-title">⚡ 压力测试</h2>
-                    <div class="flex gap-4 items-end">
-                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Brent 变动 ($)</label><input type="number" step="any" id="brent-scenario" placeholder="+5.0" class="w-full p-2 border rounded"></div>
-                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Gas 变动 ($)</label><input type="number" step="any" id="hh-scenario" placeholder="-0.5" class="w-full p-2 border rounded"></div>
-                        <button onclick="runStressTest()" class="bg-slate-100 text-slate-900 px-6 py-2 rounded hover:bg-white h-10 font-semibold shadow-lg shadow-slate-900/40">计算</button>
-                    </div>
-                    <div id="stress-test-result" class="mt-4 p-3 bg-slate-900/70 rounded hidden text-center text-sm border border-slate-700">
-                        <span class="font-medium">预计 P/L 变动: <span id="pl-change" class="font-bold"></span></span>
-                        <span class="mx-4 text-gray-300">|</span>
-                        <span class="font-medium">新浮动 P/L: <span id="new-total-pl" class="font-bold"></span></span>
-                    </div>
-                </div>
-
                 <!-- Current Positions -->
                 <div class="panel p-6">
                     <div class="flex justify-between items-center mb-4">
@@ -220,6 +205,22 @@
                     </div>
                 </div>
                 
+                <!-- Stress Test -->
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 panel-title">⚡ 压力测试</h2>
+                    <div class="flex gap-4 items-end">
+                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Brent 变动 ($)</label><input type="number" step="any" id="brent-scenario" placeholder="+5.0" class="w-full p-2 border rounded"></div>
+                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Gas 变动 ($)</label><input type="number" step="any" id="hh-scenario" placeholder="-0.5" class="w-full p-2 border rounded"></div>
+                        <button onclick="runStressTest()" class="bg-slate-100 text-slate-900 px-6 py-2 rounded hover:bg-white h-10 font-semibold shadow-lg shadow-slate-900/40">计算</button>
+                    </div>
+                    <div id="stress-test-result" class="mt-4 p-3 bg-slate-900/70 rounded hidden text-center text-sm border border-slate-700">
+                        <span class="font-medium">预计 P/L 变动: <span id="pl-change" class="font-bold"></span></span>
+                        <span class="mx-4 text-gray-300">|</span>
+                        <span class="font-medium">新浮动 P/L: <span id="new-total-pl" class="font-bold"></span></span>
+                    </div>
+                </div>
+
+
                 <!-- Logs & History -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="panel p-6">
