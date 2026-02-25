@@ -159,6 +159,23 @@
 
             <!-- Right Column: Data (8 cols) -->
             <div class="lg:col-span-8 space-y-6">
+                <div class="panel p-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4 border-b border-slate-700 pb-2">
+                        <h2 class="text-lg font-bold panel-title">🌍 市场行情可视化（daily_data.json）</h2>
+                        <span id="inline-market-date" class="market-pill">尚未导入数据包</span>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div class="lg:col-span-2">
+                            <div class="chart-container" style="height: 260px;"><canvas id="external-market-chart"></canvas></div>
+                            <p id="inline-market-empty" class="text-xs text-slate-400 mt-2">导入日报数据包后，将在此展示关键品种价格柱状图。</p>
+                        </div>
+                        <div class="market-card">
+                            <div class="text-xs text-slate-400 mb-2">📰 要闻速览</div>
+                            <ul id="inline-market-news" class="text-xs text-slate-200 space-y-2"></ul>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Stress Test -->
                 <div class="panel p-6">
                     <h2 class="text-lg font-bold mb-4 panel-title">⚡ 压力测试</h2>
@@ -226,22 +243,6 @@
                     </div>
                 </div>
 
-                <div class="panel p-6">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4 border-b border-slate-700 pb-2">
-                        <h2 class="text-lg font-bold panel-title">🌍 市场行情可视化（daily_data.json）</h2>
-                        <span id="inline-market-date" class="market-pill">尚未导入数据包</span>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div class="lg:col-span-2">
-                            <div class="chart-container" style="height: 260px;"><canvas id="external-market-chart"></canvas></div>
-                            <p id="inline-market-empty" class="text-xs text-slate-400 mt-2">导入日报数据包后，将在此展示关键品种价格柱状图。</p>
-                        </div>
-                        <div class="market-card">
-                            <div class="text-xs text-slate-400 mb-2">📰 要闻速览</div>
-                            <ul id="inline-market-news" class="text-xs text-slate-200 space-y-2"></ul>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
