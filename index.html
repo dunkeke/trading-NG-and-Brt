@@ -37,6 +37,8 @@
         .dash-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.75rem; padding: 1rem; text-align: center; box-shadow: 0 12px 28px rgba(2, 8, 23, 0.45); }
         .dash-val { font-size: 1.5rem; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; margin-top: 0.5rem; }
         .dash-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+        .market-card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 0.75rem; padding: 0.75rem; }
+        .market-pill { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.7rem; background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(148, 163, 184, 0.25); color: #cbd5e1; }
 
         /* Futuristic theme */
         .theme-dark { background: radial-gradient(circle at top, rgba(30, 58, 138, 0.35), rgba(2, 6, 23, 0.95) 55%), linear-gradient(180deg, #0b1120 0%, #020617 100%); }
@@ -142,6 +144,7 @@
                         <button onclick="exportData()" class="bg-slate-800 text-slate-200 py-2 px-3 rounded hover:bg-slate-700 text-xs">备份数据</button>
                         <label for="import-file" class="cursor-pointer bg-slate-800 text-slate-200 py-2 px-3 rounded hover:bg-slate-700 text-xs text-center block">恢复数据<input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)"></label>
                         <label for="import-mtm-file" class="col-span-2 cursor-pointer bg-emerald-900/40 text-emerald-200 border border-emerald-400/30 py-2 px-3 rounded hover:bg-emerald-900/60 text-xs text-center flex items-center justify-center gap-1">📈 更新行情 (JSON)<input type="file" id="import-mtm-file" class="hidden" accept=".json" onchange="importMtmData(event)"></label>
+                        <label for="import-daily-file" class="col-span-2 cursor-pointer bg-sky-900/40 text-sky-200 border border-sky-400/30 py-2 px-3 rounded hover:bg-sky-900/60 text-xs text-center flex items-center justify-center gap-1">🧩 导入日报数据包 (daily_data.json)<input type="file" id="import-daily-file" class="hidden" accept=".json" onchange="importDailyDataPackage(event)"></label>
                     </div>
                     <div class="mt-4 space-y-2">
                         <button onclick="exportLedgerCSV()" class="w-full bg-sky-500 text-slate-900 py-2 px-4 rounded hover:bg-sky-400 text-sm font-semibold">导出逐日台账 (CSV)</button>
@@ -156,18 +159,20 @@
 
             <!-- Right Column: Data (8 cols) -->
             <div class="lg:col-span-8 space-y-6">
-                <!-- Stress Test -->
                 <div class="panel p-6">
-                    <h2 class="text-lg font-bold mb-4 panel-title">⚡ 压力测试</h2>
-                    <div class="flex gap-4 items-end">
-                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Brent 变动 ($)</label><input type="number" step="any" id="brent-scenario" placeholder="+5.0" class="w-full p-2 border rounded"></div>
-                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Gas 变动 ($)</label><input type="number" step="any" id="hh-scenario" placeholder="-0.5" class="w-full p-2 border rounded"></div>
-                        <button onclick="runStressTest()" class="bg-slate-100 text-slate-900 px-6 py-2 rounded hover:bg-white h-10 font-semibold shadow-lg shadow-slate-900/40">计算</button>
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4 border-b border-slate-700 pb-2">
+                        <h2 class="text-lg font-bold panel-title">🌍 市场行情可视化（daily_data.json）</h2>
+                        <span id="inline-market-date" class="market-pill">尚未导入数据包</span>
                     </div>
-                    <div id="stress-test-result" class="mt-4 p-3 bg-slate-900/70 rounded hidden text-center text-sm border border-slate-700">
-                        <span class="font-medium">预计 P/L 变动: <span id="pl-change" class="font-bold"></span></span>
-                        <span class="mx-4 text-gray-300">|</span>
-                        <span class="font-medium">新浮动 P/L: <span id="new-total-pl" class="font-bold"></span></span>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div class="lg:col-span-2">
+                            <div class="chart-container" style="height: 260px;"><canvas id="external-market-chart"></canvas></div>
+                            <p id="inline-market-empty" class="text-xs text-slate-400 mt-2">导入日报数据包后，将在此展示关键品种价格柱状图。</p>
+                        </div>
+                        <div class="market-card">
+                            <div class="text-xs text-slate-400 mb-2">📰 要闻速览</div>
+                            <ul id="inline-market-news" class="text-xs text-slate-200 space-y-2"></ul>
+                        </div>
                     </div>
                 </div>
 
@@ -200,6 +205,22 @@
                     </div>
                 </div>
                 
+                <!-- Stress Test -->
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 panel-title">⚡ 压力测试</h2>
+                    <div class="flex gap-4 items-end">
+                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Brent 变动 ($)</label><input type="number" step="any" id="brent-scenario" placeholder="+5.0" class="w-full p-2 border rounded"></div>
+                        <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Gas 变动 ($)</label><input type="number" step="any" id="hh-scenario" placeholder="-0.5" class="w-full p-2 border rounded"></div>
+                        <button onclick="runStressTest()" class="bg-slate-100 text-slate-900 px-6 py-2 rounded hover:bg-white h-10 font-semibold shadow-lg shadow-slate-900/40">计算</button>
+                    </div>
+                    <div id="stress-test-result" class="mt-4 p-3 bg-slate-900/70 rounded hidden text-center text-sm border border-slate-700">
+                        <span class="font-medium">预计 P/L 变动: <span id="pl-change" class="font-bold"></span></span>
+                        <span class="mx-4 text-gray-300">|</span>
+                        <span class="font-medium">新浮动 P/L: <span id="new-total-pl" class="font-bold"></span></span>
+                    </div>
+                </div>
+
+
                 <!-- Logs & History -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="panel p-6">
@@ -222,6 +243,7 @@
                         <div><h3 class="text-sm font-medium text-center mb-2 text-slate-300">累计盈亏曲线</h3><div class="chart-container"><canvas id="realized-pl-chart"></canvas></div></div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -301,6 +323,18 @@
                     </div>
                 </div>
             </div>
+
+            <div class="mt-6 bg-slate-900/70 p-4 rounded-lg shadow-sm border border-slate-700">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3 border-b border-slate-700 pb-2">
+                    <h3 class="text-sm font-bold text-slate-200">🌍 市场行情快照（来自 daily_data.json）</h3>
+                    <span id="market-data-date" class="market-pill">尚未导入数据包</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2" id="market-price-grid"></div>
+                <div class="market-card mt-4">
+                    <div class="text-xs text-slate-400 mb-2">📰 最新要闻（Top 5）</div>
+                    <ul id="market-news-list" class="text-xs text-slate-200 space-y-2"></ul>
+                </div>
+            </div>
             
             <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-slate-700">
                 <button onclick="exportDashboardReport()" class="bg-indigo-500 text-white py-2 px-6 rounded-md hover:bg-indigo-400 flex items-center gap-2 text-sm font-bold shadow-sm">
@@ -346,7 +380,7 @@ const config = {
 
 // ==================== 2. GLOBAL STATE ====================
 let state = {
-    positions: [], history: [], transactionLog: [], marketPrices: {},
+    positions: [], history: [], transactionLog: [], marketPrices: {}, externalMarketData: null,
     settings: { 
         fees: { brentPerBbl: 0, hhPerMMBtu: 0 }, 
         exchangeRateRMB: 7.13, 
@@ -356,12 +390,13 @@ let state = {
     },
     filterDate: null
 };
-let positionChart = null, plChart = null, parsedTradesBuffer = [];
+let positionChart = null, plChart = null, externalMarketChart = null, parsedTradesBuffer = [];
 
 // ==================== 3. INITIALIZATION & UTILS ====================
 function hydrateState() {
     if(!state.positions) state.positions=[]; if(!state.history) state.history=[]; 
     if(!state.transactionLog) state.transactionLog=[]; if(!state.marketPrices) state.marketPrices={};
+    if(!state.externalMarketData) state.externalMarketData = null;
     if(!state.settings) state.settings={ fees:{brentPerBbl:0, hhPerMMBtu:0}, exchangeRateRMB:7.13, initialRealizedPL:0, reconciliation: { base: 156170, other: 45800 }, ttfMultiplier: 3412 };
     if(!state.settings.reconciliation) state.settings.reconciliation = { base: 156170, other: 45800 }; 
     if(!state.settings.ttfMultiplier) state.settings.ttfMultiplier = 3412;
@@ -406,6 +441,142 @@ function setMtmPrice(product, contract, value) {
     const parsed = parseFloat(value);
     if (!Number.isFinite(parsed)) return;
     state.marketPrices[getScopedMtmKey(product, contract)] = parsed;
+}
+
+function parseOilNews(newsText) {
+    if (!newsText || typeof newsText !== 'string') return [];
+    return newsText
+        .split(/\n\s*\n/)
+        .map(chunk => {
+            const title = (chunk.match(/Title:\s*(.*)/i) || [])[1] || '';
+            const summary = (chunk.match(/Summary:\s*(.*)/i) || [])[1] || '';
+            return {
+                title: title.trim(),
+                summary: summary.trim()
+            };
+        })
+        .filter(item => item.title || item.summary)
+        .slice(0, 5);
+}
+
+function renderExternalMarketSnapshot() {
+    const dateEl = document.getElementById('market-data-date');
+    const gridEl = document.getElementById('market-price-grid');
+    const newsEl = document.getElementById('market-news-list');
+    if (!dateEl || !gridEl || !newsEl) return;
+
+    const data = state.externalMarketData;
+    if (!data || !data.prices) {
+        dateEl.textContent = '尚未导入数据包';
+        gridEl.innerHTML = '<div class="col-span-full text-xs text-slate-400">请在左侧“数据与报表”中导入 Python 输出的 daily_data.json。</div>';
+        newsEl.innerHTML = '<li class="text-slate-400">暂无新闻内容</li>';
+        return;
+    }
+
+    dateEl.textContent = `数据日期：${data.date || '未知'}`;
+    const labelMap = {
+        brent_future: 'Brent',
+        wti_future: 'WTI',
+        gasoline: 'Gasoline',
+        diesel: 'Diesel',
+        murban_crude: 'Murban',
+        dme_oman: 'DME Oman'
+    };
+
+    gridEl.innerHTML = Object.entries(labelMap)
+        .map(([key, label]) => {
+            const val = data.prices[key] ?? 'N/A';
+            const isNum = Number.isFinite(Number(val));
+            return `
+                <div class="market-card">
+                    <div class="text-[11px] text-slate-400 uppercase tracking-wide">${label}</div>
+                    <div class="text-sm font-bold text-slate-100 mt-1">${isNum ? Number(val).toFixed(2) : val}</div>
+                </div>
+            `;
+        })
+        .join('');
+
+    const newsItems = parseOilNews(data.news_text);
+    if (newsItems.length === 0) {
+        newsEl.innerHTML = '<li class="text-slate-400">暂无新闻内容</li>';
+        return;
+    }
+
+    newsEl.innerHTML = newsItems
+        .map(item => `<li><p class="font-semibold text-slate-100">• ${item.title || '无标题'}</p><p class="text-slate-400">${item.summary || ''}</p></li>`)
+        .join('');
+}
+
+function renderInlineMarketVisualization() {
+    const data = state.externalMarketData;
+    const dateEl = document.getElementById('inline-market-date');
+    const emptyEl = document.getElementById('inline-market-empty');
+    const newsEl = document.getElementById('inline-market-news');
+    const canvas = document.getElementById('external-market-chart');
+    if (!dateEl || !emptyEl || !newsEl || !canvas) return;
+
+    const labelMap = {
+        brent_future: 'Brent',
+        wti_future: 'WTI',
+        gasoline: 'Gasoline',
+        diesel: 'Diesel',
+        murban_crude: 'Murban',
+        dme_oman: 'DME Oman'
+    };
+
+    if (!data || !data.prices) {
+        dateEl.textContent = '尚未导入数据包';
+        emptyEl.classList.remove('hidden');
+        newsEl.innerHTML = '<li class="text-slate-400">暂无新闻内容</li>';
+        if (externalMarketChart) {
+            externalMarketChart.destroy();
+            externalMarketChart = null;
+        }
+        return;
+    }
+
+    dateEl.textContent = `数据日期：${data.date || '未知'}`;
+    const labels = [];
+    const values = [];
+    Object.entries(labelMap).forEach(([key, label]) => {
+        const num = Number(data.prices[key]);
+        if (Number.isFinite(num)) {
+            labels.push(label);
+            values.push(num);
+        }
+    });
+
+    if (externalMarketChart) externalMarketChart.destroy();
+    if (values.length > 0) {
+        externalMarketChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Price (USD)',
+                    data: values,
+                    borderRadius: 6,
+                    backgroundColor: ['#0ea5e9','#22d3ee','#34d399','#f59e0b','#a78bfa','#f472b6']
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.12)' } },
+                    y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(148,163,184,0.12)' } }
+                }
+            }
+        });
+        emptyEl.classList.add('hidden');
+    } else {
+        emptyEl.classList.remove('hidden');
+    }
+
+    const newsItems = parseOilNews(data.news_text);
+    newsEl.innerHTML = newsItems.length
+        ? newsItems.map(item => `<li><p class="font-semibold text-slate-100">• ${item.title || '无标题'}</p><p class="text-slate-400">${item.summary || ''}</p></li>`).join('')
+        : '<li class="text-slate-400">暂无新闻内容</li>';
 }
 
 // ==================== 4. MODALS ====================
@@ -864,6 +1035,7 @@ function openDashboardModal() {
     dashFloating.className = `dash-val ${totalFloating >= 0 ? 'text-blue-600' : 'text-red-600'}`; // Blue/Red for floating
     
     document.getElementById('dash-tx-count').textContent = state.transactionLog.filter(l => l.status==='active' && l.date.startsWith(today)).length;
+    renderExternalMarketSnapshot();
 
     document.getElementById('dashboard-modal').classList.remove('hidden');
 }
@@ -902,6 +1074,16 @@ function exportDashboardReport() {
         txt += `${prod}: 净持仓 ${netQty.toFixed(3)} | 浮动 ${subFloating.toFixed(0)}\n`;
     });
 
+    if (state.externalMarketData && state.externalMarketData.prices) {
+        txt += `
+--- 市场行情快照(${state.externalMarketData.date || '未知日期'}) ---
+`;
+        Object.entries(state.externalMarketData.prices).forEach(([k, v]) => {
+            txt += `${k}: ${v}
+`;
+        });
+    }
+
     const blob = new Blob([txt], {type:'text/plain'});
     const link = document.createElement('a');
     link.href=URL.createObjectURL(blob);
@@ -914,7 +1096,7 @@ function exportDashboardReport() {
 
 // --- RENDER & INIT (Moved to end) ---
 function renderAll() {
-    renderPositions(); renderLogs(); renderHistory(); 
+    renderPositions(); renderLogs(); renderHistory(); renderInlineMarketVisualization(); 
     document.getElementById('pos-count-badge').textContent = state.positions.length;
 }
 
@@ -1070,6 +1252,33 @@ function importMtmData(event) {
     };
     reader.readAsText(file); event.target.value = '';
 }
+
+function importDailyDataPackage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (!importedData.prices || !importedData.date) {
+                throw new Error('文件格式不正确：需要包含 date / prices / news_text');
+            }
+            state.externalMarketData = {
+                date: importedData.date,
+                prices: importedData.prices,
+                news_text: importedData.news_text || ''
+            };
+            saveState();
+            renderExternalMarketSnapshot();
+            renderInlineMarketVisualization();
+            openInfoModal('成功', `日报导入完成：${importedData.date}`);
+        } catch (error) {
+            openInfoModal('失败', error.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
 function exportToCSV(headers, dataRows, fileName) {
     const csv = [ headers.join(','), ...dataRows.map(row => headers.map(fieldName => { let cell = (row[fieldName] ?? '').toString().replace(/"/g, '""'); if (cell.search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(',')) ].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); const url = URL.createObjectURL(blob);
@@ -1126,6 +1335,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-
 
