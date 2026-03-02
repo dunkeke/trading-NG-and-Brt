@@ -6,6 +6,7 @@
     <title>合约交易分析终端 dundunke©️ (复盘看板版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .chart-container { position: relative; height: 300px; width: 100%; }
@@ -277,7 +278,7 @@
     
     <!-- NEW v7.1: Dashboard Modal -->
     <div id="dashboard-modal" class="modal-backdrop hidden">
-        <div class="modal-content w-full max-w-4xl">
+        <div id="dashboard-capture-root" class="modal-content w-full max-w-4xl">
             <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">📊 综合复盘看板</h2>
@@ -341,6 +342,10 @@
                 <button onclick="exportDashboardReport()" class="bg-indigo-500 text-white py-2 px-6 rounded-md hover:bg-indigo-400 flex items-center gap-2 text-sm font-bold shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     导出看板报告 (.txt)
+                </button>
+                <button onclick="exportDashboardPNG()" class="bg-emerald-500 text-slate-900 py-2 px-6 rounded-md hover:bg-emerald-400 flex items-center gap-2 text-sm font-bold shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-8m0 8l-3-3m3 3l3-3M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" /></svg>
+                    导出看板图片 (.png)
                 </button>
             </div>
 
@@ -1096,6 +1101,44 @@ function exportDashboardReport() {
     document.body.removeChild(link);
 }
 
+
+
+async function exportDashboardPNG() {
+    const target = document.getElementById('dashboard-capture-root');
+    if (!target) {
+        openInfoModal('错误', '未找到看板区域，无法导出 PNG');
+        return;
+    }
+    if (typeof html2canvas !== 'function') {
+        openInfoModal('错误', 'PNG 导出组件加载失败，请刷新后重试');
+        return;
+    }
+
+    const actionBar = target.querySelector('.flex.justify-end.space-x-3.mt-6.pt-4.border-t.border-slate-700');
+    const originalVisibility = actionBar ? actionBar.style.visibility : '';
+
+    try {
+        if (actionBar) actionBar.style.visibility = 'hidden';
+        const canvas = await html2canvas(target, {
+            backgroundColor: '#020617',
+            scale: Math.max(2, window.devicePixelRatio || 1),
+            useCORS: true
+        });
+
+        const today = new Date().toISOString().split('T')[0];
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `dashboard_${today}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        console.error(err);
+        openInfoModal('错误', '导出 PNG 失败，请重试');
+    } finally {
+        if (actionBar) actionBar.style.visibility = originalVisibility;
+    }
+}
 
 // --- RENDER & INIT (Moved to end) ---
 function renderAll() {
