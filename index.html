@@ -1360,7 +1360,57 @@ function exportToCSV(headers, data, filename) {
     const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
-function runStressTest() { alert("压力测试计算中..."); }
+function calculateFloatingPL(overrideMtm = {}) {
+    return state.positions.reduce((sum, p) => {
+        const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
+        const mtm = Number.isFinite(overrideMtm[p.key]) ? overrideMtm[p.key] : getMtmPrice(p.product, p.contract, avg);
+        const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product] || 1000;
+        const feeRate = p.product === 'Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
+        const net = ((mtm * p.quantity) - p.totalValue) * mult - (Math.abs(p.quantity) * mult * feeRate);
+        return sum + net;
+    }, 0);
+}
+
+function getStressShiftByProduct(product, brentShift, gasShift) {
+    return product === 'Brent' ? brentShift : gasShift;
+}
+
+function validateStressTestLogic(baseTotal, shiftedTotal, plDelta) {
+    const ok = Math.abs((shiftedTotal - baseTotal) - plDelta) < 1e-6;
+    if (!ok) {
+        console.warn('Stress test validation failed', { baseTotal, shiftedTotal, plDelta });
+    }
+    return ok;
+}
+
+function runStressTest() {
+    const brentShift = parseFloat(document.getElementById('brent-scenario').value) || 0;
+    const gasShift = parseFloat(document.getElementById('hh-scenario').value) || 0;
+
+    const baseTotal = calculateFloatingPL();
+    const shiftedMtm = {};
+    state.positions.forEach(p => {
+        const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
+        const currentMtm = getMtmPrice(p.product, p.contract, avg);
+        shiftedMtm[p.key] = currentMtm + getStressShiftByProduct(p.product, brentShift, gasShift);
+    });
+    const shiftedTotal = calculateFloatingPL(shiftedMtm);
+    const plDelta = shiftedTotal - baseTotal;
+
+    const plChangeEl = document.getElementById('pl-change');
+    const newTotalEl = document.getElementById('new-total-pl');
+    const resultEl = document.getElementById('stress-test-result');
+    const plClass = plDelta >= 0 ? 'text-green-600' : 'text-red-600';
+    const totalClass = shiftedTotal >= 0 ? 'text-green-600' : 'text-red-600';
+
+    plChangeEl.className = `font-bold ${plClass}`;
+    newTotalEl.className = `font-bold ${totalClass}`;
+    plChangeEl.textContent = `${plDelta >= 0 ? '+' : ''}${plDelta.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+    newTotalEl.textContent = shiftedTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    resultEl.classList.remove('hidden');
+
+    validateStressTestLogic(baseTotal, shiftedTotal, plDelta);
+}
 
 // --- INIT (At End) ---
 document.addEventListener('DOMContentLoaded', () => {
