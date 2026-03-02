@@ -6,6 +6,7 @@
     <title>合约交易分析终端 dundunke©️ (复盘看板版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         .chart-container { position: relative; height: 300px; width: 100%; }
@@ -21,6 +22,7 @@
         .badge-brent { background-color: #dbeafe; color: #1e40af; }
         .badge-hh { background-color: #dcfce7; color: #166534; }
         .badge-jkm { background-color: #ffedd5; color: #9a3412; }
+        .badge-tfu { background-color: #fff7ed; color: #9a3412; }
         .badge-ttf { background-color: #f3e8ff; color: #6b21a8; }
         .badge-long { background-color: #ecfdf5; color: #15803d; border: 1px solid #86efac; }
         .badge-short { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
@@ -104,7 +106,7 @@
                     <form id="trade-form" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">交易员</label><select id="trader" class="block w-full px-3 py-2 border rounded-md text-sm"><option>W</option><option>L</option><option>Z</option><option>D</option></select></div>
-                            <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">品种</label><select id="product" onchange="updateContractOptions()" class="block w-full px-3 py-2 border rounded-md text-sm"><option value="Brent">Brent</option><option value="Henry Hub">Henry Hub</option><option value="JKM">JKM</option><option value="TTF">TTF</option></select></div>
+                            <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">品种</label><select id="product" onchange="updateContractOptions()" class="block w-full px-3 py-2 border rounded-md text-sm"><option value="Brent">Brent</option><option value="Henry Hub">Henry Hub</option><option value="JKM">JKM</option><option value="TFU">TFU</option><option value="TTF">TTF</option></select></div>
                         </div>
                         <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">合约</label><select id="contract" class="block w-full px-3 py-2 border rounded-md text-sm"></select></div>
                         <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">交易类型</label><select id="trade-type" class="block w-full px-3 py-2 border rounded-md text-sm"><option value="regular">常规交易 (计入盈亏)</option><option value="adjustment">成本调整 (优化成本)</option></select></div>
@@ -121,7 +123,7 @@
                     <h2 class="text-lg font-bold mb-4 border-b border-slate-700 pb-3 panel-title">⚙️ 参数设置</h2>
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">Brent 费用</label><input type="number" step="0.01" id="commission-brent" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
-                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">Gas(HH/JKM)</label><input type="number" step="0.0001" id="commission-hh" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">Gas(HH/JKM/TFU)</label><input type="number" step="0.0001" id="commission-hh" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-sky-300 font-medium">TTF 换算</label><input type="number" step="0.01" id="ttf-multiplier" onchange="updateSettings()" class="text-right w-full px-2 py-1 border border-sky-400/40 rounded text-sm"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">USD/CNY 汇率</label><input type="number" step="0.01" id="exchange-rate-rmb" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
                         <div class="grid grid-cols-2 gap-2 items-center"><label class="text-sm text-slate-300">期初盈亏</label><input type="number" step="any" id="initial-realized-pl" onchange="updateSettings()" class="text-right w-full px-2 py-1 border rounded text-sm"></div>
@@ -276,7 +278,7 @@
     
     <!-- NEW v7.1: Dashboard Modal -->
     <div id="dashboard-modal" class="modal-backdrop hidden">
-        <div class="modal-content w-full max-w-4xl">
+        <div id="dashboard-capture-root" class="modal-content w-full max-w-4xl">
             <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">📊 综合复盘看板</h2>
@@ -341,6 +343,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     导出看板报告 (.txt)
                 </button>
+                <button onclick="exportDashboardPNG()" class="bg-emerald-500 text-slate-900 py-2 px-6 rounded-md hover:bg-emerald-400 flex items-center gap-2 text-sm font-bold shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-8m0 8l-3-3m3 3l3-3M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" /></svg>
+                    导出看板图片 (.png)
+                </button>
             </div>
 
             <footer class="mt-10 text-center text-xs text-slate-500">© dundunke</footer>
@@ -372,10 +378,11 @@ const config = {
         'Brent': generateContracts(),
         'Henry Hub': ['HH2511','HH2512','HH2601','HH2607'],
         'JKM': generateContracts(),
+        'TFU': generateContracts(),
         'TTF': generateContracts()
     },
-    contractMultipliers: { 'Brent': 1000, 'Henry Hub': 10000, 'JKM': 10000, 'TTF': 10000 },
-    colors: { 'Brent': 'badge-brent', 'Henry Hub': 'badge-hh', 'JKM': 'badge-jkm', 'TTF': 'badge-ttf' }
+    contractMultipliers: { 'Brent': 1000, 'Henry Hub': 10000, 'JKM': 10000, 'TFU': 10000, 'TTF': 10000 },
+    colors: { 'Brent': 'badge-brent', 'Henry Hub': 'badge-hh', 'JKM': 'badge-jkm', 'TFU': 'badge-tfu', 'TTF': 'badge-ttf' }
 };
 
 // ==================== 2. GLOBAL STATE ====================
@@ -785,6 +792,7 @@ function detectTraderFromText(clean) {
 
 function detectProductFromText(clean) {
     if (/TTF/.test(clean)) return 'TTF';
+    if (/TFU/.test(clean)) return 'TFU';
     if (/JKM/.test(clean)) return 'JKM';
     if (/\b(HH|HENRY HUB|HENRY)\b/.test(clean)) return 'Henry Hub';
     if (/\bNATURAL GAS|NAT GAS|GAS\b/.test(clean)) return 'Henry Hub';
@@ -797,7 +805,7 @@ function formatContractName(product, year, month) {
 }
 
 function parseSingleContract(clean, product, monthMap) {
-    const explicitMatch = clean.match(/\b(HH|JKM|TTF)\s?(\d{2})(\d{2})\b/);
+    const explicitMatch = clean.match(/\b(HH|JKM|TFU|TTF)\s?(\d{2})(\d{2})\b/);
     if (explicitMatch) {
         const prefix = explicitMatch[1];
         const year = explicitMatch[2];
@@ -805,7 +813,7 @@ function parseSingleContract(clean, product, monthMap) {
         return prefix === 'HH' || product === 'Henry Hub' ? `HH${year}${month}` : `${year}${month}`;
     }
 
-    const labeledMonthMatch = clean.match(/\b(HH|JKM|TTF)\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})\b/);
+    const labeledMonthMatch = clean.match(/\b(HH|JKM|TFU|TTF)\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2})\b/);
     if (labeledMonthMatch) {
         const year = labeledMonthMatch[3];
         const month = monthMap[labeledMonthMatch[2]];
@@ -1094,6 +1102,44 @@ function exportDashboardReport() {
 }
 
 
+
+async function exportDashboardPNG() {
+    const target = document.getElementById('dashboard-capture-root');
+    if (!target) {
+        openInfoModal('错误', '未找到看板区域，无法导出 PNG');
+        return;
+    }
+    if (typeof html2canvas !== 'function') {
+        openInfoModal('错误', 'PNG 导出组件加载失败，请刷新后重试');
+        return;
+    }
+
+    const actionBar = target.querySelector('.flex.justify-end.space-x-3.mt-6.pt-4.border-t.border-slate-700');
+    const originalVisibility = actionBar ? actionBar.style.visibility : '';
+
+    try {
+        if (actionBar) actionBar.style.visibility = 'hidden';
+        const canvas = await html2canvas(target, {
+            backgroundColor: '#020617',
+            scale: Math.max(2, window.devicePixelRatio || 1),
+            useCORS: true
+        });
+
+        const today = new Date().toISOString().split('T')[0];
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `dashboard_${today}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        console.error(err);
+        openInfoModal('错误', '导出 PNG 失败，请重试');
+    } finally {
+        if (actionBar) actionBar.style.visibility = originalVisibility;
+    }
+}
+
 // --- RENDER & INIT (Moved to end) ---
 function renderAll() {
     renderPositions(); renderLogs(); renderHistory(); renderInlineMarketVisualization(); 
@@ -1335,4 +1381,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
