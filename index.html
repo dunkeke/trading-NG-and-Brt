@@ -327,6 +327,26 @@
             </div>
 
             <div class="mt-6 bg-slate-900/70 p-4 rounded-lg shadow-sm border border-slate-700">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3 border-b border-slate-700 pb-2">
+                    <h3 class="text-sm font-bold text-slate-200">🎯 MTM 结构加仓建议（目标均价 Avg）</h3>
+                    <div class="flex items-center gap-2 text-xs">
+                        <label for="dash-target-avg" class="text-slate-400">目标均价 Avg</label>
+                        <input id="dash-target-avg" type="number" step="any" class="w-28 px-2 py-1 border rounded border-slate-600" placeholder="如 83.50">
+                        <button onclick="generateMtmAddOnAdvice()" class="bg-sky-500 hover:bg-sky-400 text-slate-900 font-semibold px-3 py-1 rounded">生成建议</button>
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 mb-2" id="dash-addon-summary">输入目标均价后生成建议。</div>
+                <div class="overflow-y-auto max-h-56 border border-slate-700 rounded">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-800/80 sticky top-0 text-slate-400">
+                            <tr><th class="p-2">品种</th><th class="p-2">方向</th><th class="p-2 text-right">当前均价</th><th class="p-2 text-right">建议加仓总量</th><th class="p-2">分月建议</th></tr>
+                        </thead>
+                        <tbody id="dash-addon-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-slate-900/70 p-4 rounded-lg shadow-sm border border-slate-700">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3 border-b border-slate-700 pb-2">
                     <h3 class="text-sm font-bold text-slate-200">🌍 市场行情快照（来自 daily_data.json）</h3>
                     <span id="market-data-date" class="market-pill">尚未导入数据包</span>
@@ -388,6 +408,7 @@ const config = {
 // ==================== 2. GLOBAL STATE ====================
 let state = {
     positions: [], history: [], transactionLog: [], marketPrices: {}, externalMarketData: null,
+    dashboardAdvice: [], dashboardAdviceTargetAvg: null,
     settings: { 
         fees: { brentPerBbl: 0, hhPerMMBtu: 0 }, 
         exchangeRateRMB: 7.13, 
@@ -404,6 +425,8 @@ function hydrateState() {
     if(!state.positions) state.positions=[]; if(!state.history) state.history=[]; 
     if(!state.transactionLog) state.transactionLog=[]; if(!state.marketPrices) state.marketPrices={};
     if(!state.externalMarketData) state.externalMarketData = null;
+    if(!Array.isArray(state.dashboardAdvice)) state.dashboardAdvice = [];
+    if(state.dashboardAdviceTargetAvg === undefined) state.dashboardAdviceTargetAvg = null;
     if(!state.settings) state.settings={ fees:{brentPerBbl:0, hhPerMMBtu:0}, exchangeRateRMB:7.13, initialRealizedPL:0, reconciliation: { base: 156170, other: 45800 }, ttfMultiplier: 3412 };
     if(!state.settings.reconciliation) state.settings.reconciliation = { base: 156170, other: 45800 }; 
     if(!state.settings.ttfMultiplier) state.settings.ttfMultiplier = 3412;
@@ -1044,8 +1067,125 @@ function openDashboardModal() {
     
     document.getElementById('dash-tx-count').textContent = state.transactionLog.filter(l => l.status==='active' && l.date.startsWith(today)).length;
     renderExternalMarketSnapshot();
+    renderMtmAddOnAdvice();
 
     document.getElementById('dashboard-modal').classList.remove('hidden');
+}
+
+
+function contractSortValue(contract) {
+    const hh = contract.replace(/^HH/, '');
+    const quarter = hh.match(/^(\d{2})Q([1-4])$/);
+    if (quarter) return parseInt(quarter[1], 10) * 100 + parseInt(quarter[2], 10) * 3;
+    const month = hh.match(/^(\d{2})(\d{2})$/);
+    if (month) return parseInt(month[1], 10) * 100 + parseInt(month[2], 10);
+    return 999999;
+}
+
+function buildBalancedWeights(rows, netDirection) {
+    const curveSorted = [...rows].sort((a, b) => {
+        const mtmDiff = netDirection > 0 ? (a.mtm - b.mtm) : (b.mtm - a.mtm);
+        if (Math.abs(mtmDiff) > 1e-9) return mtmDiff;
+        return contractSortValue(a.contract) - contractSortValue(b.contract);
+    });
+
+    const maxQty = Math.max(...rows.map(r => Math.abs(r.quantity)), 0);
+    return curveSorted.map((row, idx) => {
+        const curveScore = curveSorted.length === 1 ? 1 : (curveSorted.length - idx) / curveSorted.length;
+        const balanceScore = maxQty > 0 ? (maxQty - Math.abs(row.quantity)) / maxQty : 1;
+        const score = 0.65 * curveScore + 0.35 * balanceScore;
+        return { ...row, score: Math.max(score, 0.05) };
+    });
+}
+
+function renderMtmAddOnAdvice() {
+    const tbody = document.getElementById('dash-addon-body');
+    const summary = document.getElementById('dash-addon-summary');
+    tbody.innerHTML = '';
+
+    if (!state.dashboardAdvice.length) {
+        summary.textContent = '输入目标均价后生成建议。';
+        tbody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-slate-400">暂无建议结果</td></tr>';
+        return;
+    }
+
+    summary.textContent = `目标均价 Avg: ${state.dashboardAdviceTargetAvg.toFixed(4)}，基于 MTM 曲线 + 当前持仓分布给出相对均衡加仓。`;
+    state.dashboardAdvice.forEach(item => {
+        const detail = item.allocations.map(a => `${a.contract}:${a.addQty.toFixed(2)} @${a.mtm.toFixed(3)}`).join(' | ');
+        tbody.innerHTML += `
+            <tr class="border-b border-slate-700/60">
+                <td class="p-2 font-semibold">${item.product}</td>
+                <td class="p-2">${item.direction}</td>
+                <td class="p-2 text-right">${item.currentAvg.toFixed(4)}</td>
+                <td class="p-2 text-right font-mono">${item.totalAddQty.toFixed(2)}</td>
+                <td class="p-2 text-slate-300">${detail}</td>
+            </tr>
+        `;
+    });
+}
+
+function generateMtmAddOnAdvice() {
+    const targetAvg = parseFloat(document.getElementById('dash-target-avg').value);
+    if (!Number.isFinite(targetAvg) || targetAvg <= 0) {
+        openInfoModal('提示', '请先输入有效的目标均价 Avg。');
+        return;
+    }
+
+    const grouped = state.positions.reduce((acc, p) => {
+        (acc[p.product] = acc[p.product] || []).push(p);
+        return acc;
+    }, {});
+
+    const advice = [];
+    Object.entries(grouped).forEach(([product, rows]) => {
+        const netQty = rows.reduce((sum, r) => sum + r.quantity, 0);
+        if (Math.abs(netQty) < 1e-6) return;
+
+        const direction = netQty > 0 ? '加多' : '加空';
+        const sameDirRows = rows.filter(r => Math.sign(r.quantity) === Math.sign(netQty));
+        if (!sameDirRows.length) return;
+
+        const absQty = sameDirRows.reduce((sum, r) => sum + Math.abs(r.quantity), 0);
+        const currentAvg = sameDirRows.reduce((sum, r) => {
+            const avg = r.quantity !== 0 ? r.totalValue / r.quantity : 0;
+            return sum + (Math.abs(r.quantity) * avg);
+        }, 0) / absQty;
+
+        if (Math.abs(currentAvg - targetAvg) < 1e-6) return;
+
+        const preparedRows = sameDirRows.map(r => {
+            const avg = r.quantity !== 0 ? r.totalValue / r.quantity : 0;
+            return {
+                contract: r.contract,
+                quantity: r.quantity,
+                avg,
+                mtm: getMtmPrice(r.product, r.contract, avg)
+            };
+        });
+
+        const weightedRows = buildBalancedWeights(preparedRows, Math.sign(netQty));
+        const scoreSum = weightedRows.reduce((sum, r) => sum + r.score, 0);
+        const syntheticAddPrice = weightedRows.reduce((sum, r) => sum + (r.mtm * r.score), 0) / scoreSum;
+        const denominator = targetAvg - syntheticAddPrice;
+        const numerator = absQty * (currentAvg - targetAvg);
+
+        if (Math.abs(denominator) < 1e-8) return;
+
+        const totalAddQty = numerator / denominator;
+        if (!Number.isFinite(totalAddQty) || totalAddQty <= 0) return;
+
+        const allocations = weightedRows.map(r => ({
+            contract: r.contract,
+            mtm: r.mtm,
+            addQty: totalAddQty * (r.score / scoreSum)
+        })).sort((a, b) => contractSortValue(a.contract) - contractSortValue(b.contract));
+
+        advice.push({ product, direction, currentAvg, totalAddQty, allocations });
+    });
+
+    state.dashboardAdvice = advice;
+    state.dashboardAdviceTargetAvg = targetAvg;
+    renderMtmAddOnAdvice();
 }
 
 function exportDashboardReport() {
@@ -1088,6 +1228,17 @@ function exportDashboardReport() {
 `;
         Object.entries(state.externalMarketData.prices).forEach(([k, v]) => {
             txt += `${k}: ${v}
+`;
+        });
+    }
+
+    if (state.dashboardAdvice.length && Number.isFinite(state.dashboardAdviceTargetAvg)) {
+        txt += `
+--- MTM结构加仓建议 (目标Avg=${state.dashboardAdviceTargetAvg.toFixed(4)}) ---
+`;
+        state.dashboardAdvice.forEach(item => {
+            const detail = item.allocations.map(a => `${a.contract}:${a.addQty.toFixed(2)}@${a.mtm.toFixed(3)}`).join(' | ');
+            txt += `${item.product}(${item.direction}) | 当前均价 ${item.currentAvg.toFixed(4)} | 建议总加仓 ${item.totalAddQty.toFixed(2)} | ${detail}
 `;
         });
     }
