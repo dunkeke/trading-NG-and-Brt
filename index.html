@@ -1266,14 +1266,37 @@ async function exportDashboardPNG() {
     }
 
     const actionBar = target.querySelector('.flex.justify-end.space-x-3.mt-6.pt-4.border-t.border-slate-700');
-    const originalVisibility = actionBar ? actionBar.style.visibility : '';
+    const closeBtn = target.querySelector('button[onclick="closeDashboardModal()"]');
+
+    const original = {
+        actionVisibility: actionBar ? actionBar.style.visibility : '',
+        closeVisibility: closeBtn ? closeBtn.style.visibility : '',
+        maxHeight: target.style.maxHeight,
+        overflowY: target.style.overflowY,
+        height: target.style.height
+    };
 
     try {
         if (actionBar) actionBar.style.visibility = 'hidden';
+        if (closeBtn) closeBtn.style.visibility = 'hidden';
+
+        // 关键：解除 modal-content 的 max-height/滚动限制，避免只导出可视区域
+        target.style.maxHeight = 'none';
+        target.style.overflowY = 'visible';
+        target.style.height = `${target.scrollHeight}px`;
+
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
         const canvas = await html2canvas(target, {
             backgroundColor: '#020617',
             scale: Math.max(2, window.devicePixelRatio || 1),
-            useCORS: true
+            useCORS: true,
+            width: target.scrollWidth,
+            height: target.scrollHeight,
+            windowWidth: Math.max(document.documentElement.clientWidth, target.scrollWidth),
+            windowHeight: Math.max(document.documentElement.clientHeight, target.scrollHeight),
+            scrollX: 0,
+            scrollY: 0
         });
 
         const today = new Date().toISOString().split('T')[0];
@@ -1287,7 +1310,11 @@ async function exportDashboardPNG() {
         console.error(err);
         openInfoModal('错误', '导出 PNG 失败，请重试');
     } finally {
-        if (actionBar) actionBar.style.visibility = originalVisibility;
+        if (actionBar) actionBar.style.visibility = original.actionVisibility;
+        if (closeBtn) closeBtn.style.visibility = original.closeVisibility;
+        target.style.maxHeight = original.maxHeight;
+        target.style.overflowY = original.overflowY;
+        target.style.height = original.height;
     }
 }
 
