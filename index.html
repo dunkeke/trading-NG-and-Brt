@@ -222,6 +222,26 @@
                     </div>
                 </div>
 
+                <!-- Brent Add-on Cost Tool -->
+                <div class="panel p-6">
+                    <h2 class="text-lg font-bold mb-4 panel-title">🛢️ 原油加仓加权成本测算</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1">当前持仓手数</label><input id="brent-current-qty" type="number" step="any" placeholder="如 50" class="w-full p-2 border rounded"></div>
+                        <div><label class="block text-xs text-slate-400 mb-1">当前持仓均价</label><input id="brent-current-avg" type="number" step="any" placeholder="如 83.2" class="w-full p-2 border rounded"></div>
+                        <div><label class="block text-xs text-slate-400 mb-1">预期加仓手数</label><input id="brent-add-qty" type="number" step="any" placeholder="如 20" class="w-full p-2 border rounded"></div>
+                        <div><label class="block text-xs text-slate-400 mb-1">预期加仓价格</label><input id="brent-add-price" type="number" step="any" placeholder="如 80.5" class="w-full p-2 border rounded"></div>
+                        <div><label class="block text-xs text-slate-400 mb-1">目标均价(可选)</label><input id="brent-target-avg" type="number" step="any" placeholder="如 82.0" class="w-full p-2 border rounded"></div>
+                    </div>
+                    <div class="mt-3">
+                        <button onclick="runBrentAddOnEstimator()" class="bg-amber-300 text-slate-900 px-6 py-2 rounded hover:bg-amber-200 h-10 font-semibold shadow-lg shadow-amber-900/30">测算</button>
+                    </div>
+                    <div id="brent-addon-result" class="mt-4 p-3 bg-slate-900/70 rounded hidden text-sm border border-slate-700 space-y-1">
+                        <div>预计新持仓: <span id="brent-new-qty" class="font-mono text-slate-100"></span></div>
+                        <div>预计加权成本: <span id="brent-new-avg" class="font-mono text-cyan-300"></span></div>
+                        <div>均价变化: <span id="brent-avg-shift" class="font-mono"></span></div>
+                        <div id="brent-target-hint" class="text-xs text-slate-400"></div>
+                    </div>
+                </div>
 
                 <!-- Logs & History -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -632,10 +652,7 @@ function openReconcileModal() {
     let detailHtml = '';
     state.positions.forEach(p=>{ 
         const c=getMtmPrice(p.product, p.contract, (p.totalValue/p.quantity)); 
-        const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product];
-        const g=(c*p.quantity*mult)-(p.totalValue*mult); 
-        const f=p.product==='Brent'?state.settings.fees.brentPerBbl:state.settings.fees.hhPerMMBtu; 
-        const net = g-(Math.abs(p.quantity)*mult*f);
+        const net = calculatePositionFloatingPL(p, c);
         totalF+=net; 
         detailHtml += `<tr class="border-b"><td class="p-2">${p.contract}</td><td class="p-2 text-right">${p.quantity.toFixed(3)}</td><td class="p-2 text-right">${c.toFixed(2)}</td><td class="p-2 text-right ${net>=0?'text-green-600':'text-red-600'}">${net.toFixed(0)}</td></tr>`;
     });
@@ -1094,14 +1111,10 @@ function openDashboardModal() {
         rows.forEach(p => {
             const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
             const mtm = getMtmPrice(p.product, p.contract, avg);
-            const mult = prod === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[prod] || 1000;
-            const gross = (mtm * p.quantity * mult) - (p.totalValue * mult);
-            const feeRate = prod==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-            const fee = Math.abs(p.quantity) * mult * feeRate;
-            const net = gross - fee;
+            const net = calculatePositionFloatingPL(p, mtm);
             
             subQty += p.quantity;
-            subCost += p.totalValue * mult;
+            subCost += p.totalValue * getContractMultiplier(prod);
             subFloating += net;
         });
         totalFloating += subFloating;
@@ -1379,6 +1392,7 @@ async function exportDashboardPNG() {
 // --- RENDER & INIT (Moved to end) ---
 function renderAll() {
     renderPositions(); renderLogs(); renderHistory(); renderInlineMarketVisualization(); 
+    validateBrentFloatingPLLogic();
     document.getElementById('pos-count-badge').textContent = state.positions.length;
 }
 
@@ -1394,12 +1408,8 @@ function renderPositions() {
         rows.forEach(p => {
             const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
             const mtm = getMtmPrice(p.product, p.contract, avg);
-            const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product] || 1000;
-            const gross = (mtm * p.quantity * mult) - (p.totalValue * mult);
-            const feeRate = p.product==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-            const fee = Math.abs(p.quantity) * mult * feeRate;
-            const net = gross - fee;
-            totalF += net; subPL += net; subQty += p.quantity; subCost += p.totalValue * mult; grandNetQty += p.quantity;
+            const net = calculatePositionFloatingPL(p, mtm);
+            totalF += net; subPL += net; subQty += p.quantity; subCost += p.totalValue * getContractMultiplier(prod); grandNetQty += p.quantity;
         });
         
         let subWAvg = Math.abs(subQty) > 0.001 ? (subCost / (subQty * (prod === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[prod]))) : 0;
@@ -1421,9 +1431,7 @@ function renderPositions() {
         rows.forEach((p, idx) => {
             const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
             const mtm = getMtmPrice(p.product, p.contract, avg);
-            const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product] || 1000;
-            const feeRate = p.product==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-            const net = ((mtm * p.quantity) - p.totalValue) * mult - (Math.abs(p.quantity) * mult * feeRate);
+            const net = calculatePositionFloatingPL(p, mtm);
             const rmb = state.settings.exchangeRateRMB || 7.13;
             let landed = 0;
             if(p.product === 'Brent') landed = (avg * 0.134 + 0.46) * rmb / 28.3;
@@ -1596,15 +1604,81 @@ function exportToCSV(headers, data, filename) {
     const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
+function getContractMultiplier(product) {
+    return product === 'TTF' ? (state.settings.ttfMultiplier || 3412) : (config.contractMultipliers[product] || 1000);
+}
+
+function getFeeRateByProduct(product) {
+    return product === 'Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
+}
+
+function calculatePositionFloatingPL(position, overrideMtm) {
+    const avg = position.quantity !== 0 ? position.totalValue / position.quantity : 0;
+    const mtm = Number.isFinite(overrideMtm) ? overrideMtm : getMtmPrice(position.product, position.contract, avg);
+    const mult = getContractMultiplier(position.product);
+    const feeRate = getFeeRateByProduct(position.product);
+    return ((mtm * position.quantity) - position.totalValue) * mult - (Math.abs(position.quantity) * mult * feeRate);
+}
+
+function validateBrentFloatingPLLogic() {
+    const mismatch = state.positions
+        .filter(p => p.product === 'Brent')
+        .find(p => {
+            const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
+            const mtm = getMtmPrice(p.product, p.contract, avg);
+            const manual = ((mtm * p.quantity) - p.totalValue) * 1000 - (Math.abs(p.quantity) * 1000 * state.settings.fees.brentPerBbl);
+            const unified = calculatePositionFloatingPL(p, mtm);
+            return Math.abs(manual - unified) > 1e-6;
+        });
+    if (mismatch) {
+        console.warn('Brent floating P/L validation failed', mismatch);
+        return false;
+    }
+    return true;
+}
+
 function calculateFloatingPL(overrideMtm = {}) {
-    return state.positions.reduce((sum, p) => {
-        const avg = p.quantity !== 0 ? p.totalValue / p.quantity : 0;
-        const mtm = Number.isFinite(overrideMtm[p.key]) ? overrideMtm[p.key] : getMtmPrice(p.product, p.contract, avg);
-        const mult = p.product === 'TTF' ? state.settings.ttfMultiplier : config.contractMultipliers[p.product] || 1000;
-        const feeRate = p.product === 'Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-        const net = ((mtm * p.quantity) - p.totalValue) * mult - (Math.abs(p.quantity) * mult * feeRate);
-        return sum + net;
-    }, 0);
+    return state.positions.reduce((sum, p) => sum + calculatePositionFloatingPL(p, overrideMtm[p.key]), 0);
+}
+
+function runBrentAddOnEstimator() {
+    const currentQty = parseFloat(document.getElementById('brent-current-qty').value);
+    const currentAvg = parseFloat(document.getElementById('brent-current-avg').value);
+    const addQty = parseFloat(document.getElementById('brent-add-qty').value);
+    const addPrice = parseFloat(document.getElementById('brent-add-price').value);
+    const targetAvg = parseFloat(document.getElementById('brent-target-avg').value);
+
+    if ([currentQty, currentAvg, addQty, addPrice].some(v => !Number.isFinite(v))) {
+        openInfoModal('提示', '请先填写有效的当前持仓、均价、预期加仓量和预期价格。');
+        return;
+    }
+
+    const newQty = currentQty + addQty;
+    if (Math.abs(newQty) < 1e-8) {
+        openInfoModal('提示', '加仓后净持仓为 0，无法计算加权均价。');
+        return;
+    }
+
+    const newAvg = ((currentQty * currentAvg) + (addQty * addPrice)) / newQty;
+    const shift = newAvg - currentAvg;
+
+    document.getElementById('brent-new-qty').textContent = newQty.toFixed(4);
+    document.getElementById('brent-new-avg').textContent = newAvg.toFixed(4);
+    document.getElementById('brent-avg-shift').textContent = `${shift >= 0 ? '+' : ''}${shift.toFixed(4)}`;
+    document.getElementById('brent-avg-shift').className = `font-mono ${shift <= 0 ? 'text-green-400' : 'text-amber-300'}`;
+
+    let hint = '未输入目标均价，仅展示按预期价格加仓后的加权成本。';
+    if (Number.isFinite(targetAvg)) {
+        const denominator = addPrice - targetAvg;
+        if (Math.abs(denominator) < 1e-8) {
+            hint = '目标均价与预期加仓价格相同，理论上需要无限加仓量才可逼近。';
+        } else {
+            const requiredAddQty = (targetAvg - currentAvg) * currentQty / denominator;
+            hint = `若要将均价调整到 ${targetAvg.toFixed(4)}，按预期价 ${addPrice.toFixed(4)} 需加仓约 ${requiredAddQty.toFixed(4)} 手。`;
+        }
+    }
+    document.getElementById('brent-target-hint').textContent = hint;
+    document.getElementById('brent-addon-result').classList.remove('hidden');
 }
 
 function getStressShiftByProduct(product, brentShift, gasShift) {
