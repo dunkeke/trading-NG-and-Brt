@@ -787,91 +787,55 @@ function rebuildStateFromLogs() {
     // Process ALL logs to get correct Positions. No filtering here.
     const logs = state.transactionLog.filter(l => l.status === 'active').sort((a,b) => new Date(a.date) - new Date(b.date));
     const tempPos = {}; state.history = [];
-    const lotBook = {};
-
-    function appendLot(book, qty, price) {
-        if (Math.abs(qty) < 0.0000001) return;
-        const last = book[book.length - 1];
-        if (last && Math.sign(last.quantity) === Math.sign(qty) && Math.abs(last.price - price) < 0.0000001) {
-            last.quantity += qty;
-        } else {
-            book.push({ quantity: qty, price });
-        }
-    }
-
-    function consumeOppositeLots(book, incomingQty, closePrice, isRegular, multiplier, feeRate) {
-        let remainingQty = incomingQty;
-        let matchedQty = 0;
-        let matchedOpenNotional = 0;
-        let closedQuantitySigned = 0;
-        let grossPL = 0;
-
-        while (Math.abs(remainingQty) > 0.0000001 && book.length > 0 && Math.sign(book[0].quantity) !== Math.sign(remainingQty)) {
-            const lot = book[0];
-            const closeQty = Math.min(Math.abs(lot.quantity), Math.abs(remainingQty));
-            const lotDir = Math.sign(lot.quantity);
-
-            matchedQty += closeQty;
-            matchedOpenNotional += closeQty * lot.price;
-            closedQuantitySigned += closeQty * lotDir * -1;
-
-            if (isRegular) {
-                grossPL += (closePrice - lot.price) * closeQty * lotDir * multiplier;
-            }
-
-            lot.quantity -= closeQty * lotDir;
-            remainingQty += closeQty * lotDir;
-
-            if (Math.abs(lot.quantity) < 0.0000001) {
-                book.shift();
-            }
-        }
-
-        const feeCost = isRegular ? matchedQty * multiplier * 2 * feeRate : 0;
-        return {
-            remainingQty,
-            matchedQty,
-            matchedOpenNotional,
-            closedQuantitySigned,
-            realizedPL: grossPL - feeCost
-        };
-    }
 
     logs.forEach(l => {
         const k = `${l.trader}-${l.product}-${l.contract}`;
         if(!tempPos[k]) tempPos[k] = { key: k, trader: l.trader, product: l.product, contract: l.contract, quantity: 0, totalValue: 0 };
-        if(!lotBook[k]) lotBook[k] = [];
 
-        const book = lotBook[k];
+        const p = tempPos[k];
         const isRegular = l.type === 'regular' || !l.type;
         const mult = l.product === 'TTF' ? (state.settings.ttfMultiplier || 3412) : config.contractMultipliers[l.product];
         const feeRate = l.product==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-
+        const epsilon = 0.0000001;
         let remainingQty = l.quantity;
-        if (book.length > 0 && Math.sign(book[0].quantity) !== Math.sign(remainingQty)) {
-            const result = consumeOppositeLots(book, remainingQty, l.price, isRegular, mult, feeRate);
-            remainingQty = result.remainingQty;
 
-            if (isRegular && result.matchedQty > 0) {
+        // 平仓实现盈亏按当前持仓加权均价计算（非 FIFO）
+        if (Math.abs(p.quantity) > epsilon && Math.sign(p.quantity) !== Math.sign(remainingQty)) {
+            const closeQty = Math.min(Math.abs(p.quantity), Math.abs(remainingQty));
+            const positionDir = Math.sign(p.quantity);
+            const avgOpenPrice = p.totalValue / p.quantity;
+
+            if (isRegular && closeQty > 0) {
+                const grossPL = (l.price - avgOpenPrice) * closeQty * positionDir * mult;
+                const feeCost = closeQty * mult * 2 * feeRate;
                 state.history.push({
                     date: l.date,
                     trader: l.trader,
                     product: l.product,
                     contract: l.contract,
-                    closedQuantity: result.closedQuantitySigned,
-                    openPrice: result.matchedOpenNotional / result.matchedQty,
+                    closedQuantity: closeQty * positionDir * -1,
+                    openPrice: avgOpenPrice,
                     closePrice: l.price,
-                    realizedPL: result.realizedPL
+                    realizedPL: grossPL - feeCost
                 });
             }
+
+            p.quantity -= closeQty * positionDir;
+            p.totalValue -= closeQty * positionDir * avgOpenPrice;
+            remainingQty += closeQty * positionDir;
         }
 
-        appendLot(book, remainingQty, l.price);
+        if (Math.abs(p.quantity) < epsilon) {
+            p.quantity = 0;
+            p.totalValue = 0;
+        }
 
-        const p = tempPos[k];
-        p.quantity = book.reduce((sum, lot) => sum + lot.quantity, 0);
-        p.totalValue = book.reduce((sum, lot) => sum + lot.quantity * lot.price, 0);
-        if (Math.abs(p.quantity) < 0.0000001) {
+        if (Math.abs(remainingQty) > epsilon) {
+            p.quantity += remainingQty;
+            p.totalValue += remainingQty * l.price;
+        }
+
+        if (Math.abs(p.quantity) < epsilon) {
             p.quantity = 0;
             p.totalValue = 0;
         }
