@@ -712,6 +712,39 @@ function reverseTradeByPos(key) {
     if(log) reverseTrade(log.id); else alert("未找到可撤销的交易记录");
 }
 
+function requestUpdatePositionAvg(key) {
+    if (state.filterDate) return alert("筛选模式下不可修改");
+    const pos = state.positions.find(p => p.key === key);
+    if (!pos || Math.abs(pos.quantity) < 0.000001) return openInfoModal("提示", "未找到有效持仓，无法修改均价。");
+
+    const currentAvg = pos.totalValue / pos.quantity;
+    const input = prompt(`请输入新的持仓均价（当前 ${currentAvg.toFixed(4)}）`, currentAvg.toFixed(4));
+    if (input === null) return;
+
+    const newAvg = parseFloat(input);
+    if (!Number.isFinite(newAvg)) return openInfoModal("错误", "请输入有效数字。");
+
+    openConfirmModal(
+        "确认修改持仓均价",
+        `${pos.contract}（${pos.trader}）均价将由 ${currentAvg.toFixed(4)} 修改为 ${newAvg.toFixed(4)}，是否确认？`,
+        () => {
+            state.transactionLog.push({
+                id: Date.now() + Math.random(),
+                date: new Date().toISOString(),
+                trader: pos.trader,
+                product: pos.product,
+                contract: pos.contract,
+                quantity: 0,
+                price: newAvg,
+                status: 'active',
+                type: 'avg_override'
+            });
+            closeActionConfirmModal();
+            updateUI();
+        }
+    );
+}
+
 function updateSettings() {
     state.settings.fees.brentPerBbl = parseFloat(document.getElementById('commission-brent').value)||0;
     state.settings.fees.hhPerMMBtu = parseFloat(document.getElementById('commission-hh').value)||0;
@@ -793,10 +826,16 @@ function rebuildStateFromLogs() {
         if(!tempPos[k]) tempPos[k] = { key: k, trader: l.trader, product: l.product, contract: l.contract, quantity: 0, totalValue: 0 };
 
         const p = tempPos[k];
+        const epsilon = 0.0000001;
+
+        if (l.type === 'avg_override') {
+            if (Math.abs(p.quantity) > epsilon) p.totalValue = p.quantity * l.price;
+            return;
+        }
+
         const isRegular = l.type === 'regular' || !l.type;
         const mult = l.product === 'TTF' ? (state.settings.ttfMultiplier || 3412) : config.contractMultipliers[l.product];
         const feeRate = l.product==='Brent' ? state.settings.fees.brentPerBbl : state.settings.fees.hhPerMMBtu;
-        const epsilon = 0.0000001;
         let remainingQty = l.quantity;
 
         // 平仓实现盈亏按当前持仓加权均价计算（非 FIFO）
@@ -1416,7 +1455,12 @@ function renderPositions() {
                     <td class="px-4 py-3 text-right"><input type="number" step="0.01" value="${mtm.toFixed(3)}" class="w-20 text-right text-xs border rounded px-1" onchange="updateMtmPrice('${uniqueId}', this.value)"></td>
                     <td class="px-4 py-3 text-right font-bold ${plClass}">${net.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td class="px-4 py-3 text-right text-xs text-slate-400">${landed ? landed.toFixed(4) : '-'}</td>
-                    <td class="px-4 py-3 text-center"><button onclick="reverseTradeByPos('${uniqueId}')" class="text-xs text-red-500 hover:underline">撤销</button></td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="requestUpdatePositionAvg('${uniqueId}')" class="text-xs text-sky-300 hover:underline">改均价</button>
+                            <button onclick="reverseTradeByPos('${uniqueId}')" class="text-xs text-red-500 hover:underline">撤销</button>
+                        </div>
+                    </td>
                 </tr>`;
         });
     });
