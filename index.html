@@ -195,7 +195,7 @@
                         <table class="w-full text-sm text-left text-slate-200">
                             <thead class="text-xs uppercase border-b border-slate-700">
                                 <tr>
-                                    <th class="px-4 py-3">品种</th><th class="px-4 py-3">合约</th><th class="px-4 py-3 text-right">数量</th><th class="px-4 py-3 text-center">方向</th><th class="px-4 py-3 text-right">持仓均价</th><th class="px-4 py-3 text-right">MTM</th><th class="px-4 py-3 text-right">浮动 P/L</th><th class="px-4 py-3 text-right">到岸价</th><th class="px-4 py-3 text-center">操作</th>
+                                    <th class="px-4 py-3">品种</th><th class="px-4 py-3">合约</th><th class="px-4 py-3 text-right">数量</th><th class="px-4 py-3 text-center">方向</th><th class="px-4 py-3 text-right">持仓均价 (可改)</th><th class="px-4 py-3 text-right">MTM</th><th class="px-4 py-3 text-right">浮动 P/L</th><th class="px-4 py-3 text-right">到岸价</th><th class="px-4 py-3 text-center">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="positions-table" class="divide-y divide-gray-100"></tbody>
@@ -1451,13 +1451,17 @@ function renderPositions() {
                     <td class="px-4 py-3 font-mono">${p.contract} <span class="text-xs text-slate-400 ml-1">${unit}</span></td>
                     <td class="px-4 py-3 text-right font-mono">${Math.abs(p.quantity).toFixed(3)}</td>
                     <td class="px-4 py-3 text-center">${dirBadge}</td>
-                    <td class="px-4 py-3 text-right text-slate-400">${avg.toFixed(3)}</td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <span class="text-slate-400">${avg.toFixed(3)}</span>
+                            <button onclick="requestUpdatePositionAvg('${uniqueId}')" class="text-[11px] px-1.5 py-0.5 rounded border border-sky-400/40 text-sky-300 hover:bg-sky-500/10">修改</button>
+                        </div>
+                    </td>
                     <td class="px-4 py-3 text-right"><input type="number" step="0.01" value="${mtm.toFixed(3)}" class="w-20 text-right text-xs border rounded px-1" onchange="updateMtmPrice('${uniqueId}', this.value)"></td>
                     <td class="px-4 py-3 text-right font-bold ${plClass}">${net.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td class="px-4 py-3 text-right text-xs text-slate-400">${landed ? landed.toFixed(4) : '-'}</td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button onclick="requestUpdatePositionAvg('${uniqueId}')" class="text-xs text-sky-300 hover:underline">改均价</button>
                             <button onclick="reverseTradeByPos('${uniqueId}')" class="text-xs text-red-500 hover:underline">撤销</button>
                         </div>
                     </td>
